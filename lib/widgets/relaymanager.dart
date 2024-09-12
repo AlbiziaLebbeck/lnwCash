@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:lnwcash/utils/relay.dart';
 
-relayManager(context, relayPool, onDone) {
+Future<void> relayManager(context, relayPool) async {
   return showModalBottomSheet(context: context, 
     builder: (context) => RelayManager(relayPool)
-  ).then(onDone);
+  );
+
 }
 
 class RelayManager extends StatefulWidget {

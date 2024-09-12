@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-mintManager(context, mints, onDone) {
+Future<void> mintManager(context, mints) async {
   return showModalBottomSheet(context: context, 
     builder: (context) => MintManager(mints),
-  ).then(onDone);
+  );
 }
 
 class MintManager extends StatefulWidget {

@@ -1,25 +1,22 @@
 import 'dart:convert';
-import 'dart:js_interop';
 
 import 'package:flutter/material.dart';
-import 'package:lnwcash/utils/relay.dart';
-import 'package:lnwcash/utils/subscription.dart';
-import 'package:lnwcash/widgets/mintmanager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:iconly/iconly.dart';
 import 'package:loader_overlay/loader_overlay.dart';
 import 'package:nostr_core_dart/nostr.dart';
 
+import 'package:lnwcash/utils/relay.dart';
+import 'package:lnwcash/utils/subscription.dart';
+
 import 'package:lnwcash/widgets/profilecard.dart';
 import 'package:lnwcash/widgets/transactionview.dart';
 import 'package:lnwcash/widgets/mintcard.dart';
-
 import 'package:lnwcash/widgets/paymentbottom.dart';
-
 import 'package:lnwcash/widgets/relaymanager.dart';
 import 'package:lnwcash/widgets/walletmanager.dart';
-// import 'package:lnwcash/widgets/mintmanager.dart';
+import 'package:lnwcash/widgets/mintmanager.dart';
 
 import 'package:lnwcash/utils/nip07.dart';
 
@@ -39,11 +36,10 @@ class _WalletPage extends State<WalletPage> {
   late final String pub;
   late final String priv;
   late final String login;
-
-  Map<String,String> wallet = {'balance': '0','mints': '[]'};
   
   List<Map<String,String>> wallets = [];
-
+  Map<String,String> wallet = {'balance': '0','mints': '[]'};
+  
   List<Map<String,dynamic>> proofs = [];
 
   @override
@@ -59,7 +55,7 @@ class _WalletPage extends State<WalletPage> {
     });
   }
 
-  void initRelay() {
+  void initRelay() async {
     List<String> prefsRelays = widget.prefs.getStringList('relays') ?? [];
     for (String url in prefsRelays)
     {
@@ -70,13 +66,16 @@ class _WalletPage extends State<WalletPage> {
       relayPool.add('wss://relay.notoshi.win');
     }
     if (prefsRelays.isEmpty) {
-      relayManager(context, relayPool, (value) {
-        widget.prefs.setStringList('relays', relayPool.getRelayURL());
-        _fetchWalletEvent();
-      });
-    } else {
-      _fetchWalletEvent();
+      await relayManager(context, relayPool);
     }
+
+    widget.prefs.setStringList('relays', relayPool.getRelayURL());
+
+    await _fetchWalletEvent();
+    await _mintSetup();
+    await _fetchTokenEvent();
+    
+    widget.prefs.setString('wallet', jsonEncode(wallet));
   }
 
   @override
@@ -141,14 +140,13 @@ class _WalletPage extends State<WalletPage> {
                   children: [
                     Text("Mints", style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600),),
                     IconButton(
-                      onPressed: () {
+                      onPressed: () async {
                         final dynamic mints = jsonDecode(wallet['mints']!);
-                        mintManager(context, mints, (value) {
-                          setState(() {
-                            wallet['mints'] = jsonEncode(mints);
-                            widget.prefs.setString('wallet', jsonEncode(wallet));
-                          });
+                        await mintManager(context, mints);
+                        setState(() {
+                          wallet['mints'] = jsonEncode(mints);
                         });
+                        widget.prefs.setString('wallet', jsonEncode(wallet));
                       },
                       iconSize: 27,
                       icon: Icon(Icons.add_circle_outline, 
@@ -216,13 +214,12 @@ class _WalletPage extends State<WalletPage> {
     );
   }
 
-  _fetchWalletEvent() {
+  Future<void>_fetchWalletEvent() async {
     String walletStr = widget.prefs.getString('wallet') ?? '';
     if (walletStr != '') {
       setState(() {
         wallet = Map.castFrom(jsonDecode(walletStr));
-      }); 
-      _fetchTokenEvent();
+      });
     }
     else {
       String subId = generate64RandomHexChars();
@@ -258,6 +255,7 @@ class _WalletPage extends State<WalletPage> {
             );
             String name = decryptMsg.where((e) => e[0] == 'name').toList()[0][1].toString();
             String privWal = decryptMsg.where((e) => e[0] == 'privkey').toList()[0][1].toString();
+            
             wallets.add({
               'id': walletId,
               'created_at': event['created_at'].toString(),
@@ -272,23 +270,30 @@ class _WalletPage extends State<WalletPage> {
       );
       relayPool.subscribe(subscription);
       context.loaderOverlay.show();
-      Future.delayed(const Duration(seconds: 3), () {
-        relayPool.unsubscribe(subId);
-        if (mounted) {
-          context.loaderOverlay.hide();
-          walletManager(context, widget.prefs, wallets, relayPool, (value) {
-            setState(() {
-              wallet = wallets.where((e) => e['selected'] == 'true').toList()[0];
-            });
-            
-            _fetchTokenEvent();
-          });
-        }
+      await Future.delayed(const Duration(seconds: 3));
+      relayPool.unsubscribe(subId);
+      if (mounted) {
+        context.loaderOverlay.hide();
+        await walletManager(context, widget.prefs, wallets, relayPool);
+        setState(() {
+          wallet = wallets.where((e) => e['selected'] == 'true').toList()[0];
+        });
+      }
+    }
+  }
+
+  Future<void> _mintSetup() async {
+    final dynamic mints = jsonDecode(wallet['mints']!);
+    if (mints.isEmpty) {
+      mints.add({'url':'https://mint.lnwasanee.com', 'amount':0});
+      await mintManager(context, mints);
+      setState(() {
+        wallet['mints'] = jsonEncode(mints);
       });
     }
   }
 
-  _fetchTokenEvent() {
+  Future<void> _fetchTokenEvent() async {
     String subId = generate64RandomHexChars(); 
     Subscription subscription = Subscription(
       subId, 
@@ -326,26 +331,10 @@ class _WalletPage extends State<WalletPage> {
     );
     wallet['balance'] = '0';
     relayPool.subscribe(subscription);
-    context.loaderOverlay.show();
-    Future.delayed(const Duration(seconds: 3), () {
-      relayPool.unsubscribe(subId);
-      context.loaderOverlay.hide();
-      final dynamic mints = jsonDecode(wallet['mints']!);
-      if (mints.isEmpty) {
-        mints.add({'url':'https://mint.lnwasanee.com', 'amount':0});
-        if (mounted) {
-          mintManager(context, mints, (value) {
-            setState(() {
-              wallet['mints'] = jsonEncode(mints);
-              widget.prefs.setString('wallet', jsonEncode(wallet));
-            });
-          });
-        }
-      }
-      else {
-        widget.prefs.setString('wallet', jsonEncode(wallet));
-      }
-    });
+    if (mounted) context.loaderOverlay.show();
+    await Future.delayed(const Duration(seconds: 3));
+    relayPool.unsubscribe(subId);
+    if (mounted) context.loaderOverlay.hide();
   }
 
   _sendReceive(BuildContext context, {required Icon icon, required String title}) {

@@ -8,10 +8,10 @@ import 'package:lnwcash/utils/nip07.dart';
 import 'package:nostr_core_dart/nostr.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-walletManager(context, prefs, wallets, relaypools, onDone) {
+Future<void> walletManager(context, prefs, wallets, relaypools) {
   return showModalBottomSheet(context: context, 
     builder: (context) => WalletManager(wallets, prefs, relaypools),
-  ).then(onDone);
+  );
 }
 
 class WalletManager extends StatefulWidget {
