@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:nostr_core_dart/nostr.dart';
@@ -54,6 +55,7 @@ class LoginPage extends StatelessWidget {
               ),
               const SizedBox(height: 42,),
               FadeInUp(child: const LoginForm()),
+              SizedBox(height: MediaQuery.of(context).viewInsets.bottom,),
             ]
           ),
         ),
@@ -77,6 +79,8 @@ class _LoginFormState extends State<LoginForm> {
 
   late String pub;
 
+  final nsecCtl = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -96,16 +100,32 @@ class _LoginFormState extends State<LoginForm> {
       child: Column(
         children: <Widget>[
           TextFormField(
+            controller: nsecCtl,
             decoration: InputDecoration(
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(25)),
               labelText: 'Enter your nsec',
-              suffixIcon: IconButton(
-                onPressed: () {
-                  setState(() {
-                    passwordVisible = !passwordVisible;
-                  });
-                }, 
-                icon: Icon(passwordVisible ? Icons.visibility_off : Icons.visibility)
+              suffixIcon: Row( 
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    onPressed: () async {
+                      final clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
+                      String? clipboardText = clipboardData?.text;
+                      setState(() {
+                        nsecCtl.text = clipboardText ?? '';
+                      });
+                    }, 
+                    icon: const Icon(Icons.paste_sharp)
+                  ),
+                  IconButton(
+                    onPressed: () {
+                      setState(() {
+                        passwordVisible = !passwordVisible;
+                      });
+                    }, 
+                    icon: Icon(passwordVisible ? Icons.visibility_off : Icons.visibility)
+                  )
+                ]
               )
             ),
             obscureText: !passwordVisible,

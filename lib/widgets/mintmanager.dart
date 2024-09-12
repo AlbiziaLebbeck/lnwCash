@@ -9,7 +9,7 @@ mintManager(context, mints, onDone) {
 class MintManager extends StatefulWidget {
   const MintManager(this.mints, {super.key});
 
-  final List<String> mints;
+  final dynamic mints;
 
   @override
   State<MintManager> createState() => _MintManager();
@@ -17,13 +17,17 @@ class MintManager extends StatefulWidget {
 
 class _MintManager extends State<MintManager>{
   
+  late dynamic mints;
   final _mintKey = GlobalKey<FormState>();
+  
+  @override
+  void initState() {
+    super.initState();
+    mints = widget.mints;
+  }
 
   @override
   Widget build(BuildContext context) {
-
-    List<String> mintsURL = widget.mints;
-
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -66,12 +70,12 @@ class _MintManager extends State<MintManager>{
                       return "Mint url is required";
                     }
 
-                    if (mintsURL.contains(value)) {
+                    if (mints.where((e) => e['url'] == value).isNotEmpty) {
                       return "This mint is already added";
                     }
 
                     setState(() {
-                      mintsURL.add(value);
+                      mints.add({'url':value, 'amount':0});
                     });
 
                     return null;
@@ -97,7 +101,7 @@ class _MintManager extends State<MintManager>{
             height: MediaQuery.of(context).size.height/2 -190,
             child: ListView(
               scrollDirection: Axis.vertical,
-              children: List.generate(mintsURL.length, 
+              children: List.generate(mints.length, 
                 (index) => Container(
                   margin: const EdgeInsets.only(bottom: 8, right: 3),
                   padding: const EdgeInsets.only(top: 4, bottom: 4, left: 32, right: 16),
@@ -115,7 +119,7 @@ class _MintManager extends State<MintManager>{
                   ),
                   child: Row(
                     children: [
-                      Expanded(child: Text(mintsURL[index], 
+                      Expanded(child: Text(mints[index]['url'], 
                             style: TextStyle(
                             fontSize: 14, 
                             fontWeight: FontWeight.w600,
@@ -126,9 +130,9 @@ class _MintManager extends State<MintManager>{
                       const SizedBox(width: 5),
                       IconButton(
                         onPressed: () {
-                          if (mintsURL.length > 1) {
+                          if (mints.length > 1) {
                             setState(() {
-                              mintsURL.remove(mintsURL[index]);
+                              mints.removeAt(index);
                             });
                           }
                           else {

@@ -4,6 +4,7 @@ import 'dart:js_interop';
 import 'package:flutter/material.dart';
 import 'package:lnwcash/utils/relay.dart';
 import 'package:lnwcash/utils/subscription.dart';
+import 'package:lnwcash/widgets/mintmanager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:iconly/iconly.dart';
@@ -140,7 +141,15 @@ class _WalletPage extends State<WalletPage> {
                   children: [
                     Text("Mints", style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600),),
                     IconButton(
-                      onPressed: ()=>{},
+                      onPressed: () {
+                        final dynamic mints = jsonDecode(wallet['mints']!);
+                        mintManager(context, mints, (value) {
+                          setState(() {
+                            wallet['mints'] = jsonEncode(mints);
+                            widget.prefs.setString('wallet', jsonEncode(wallet));
+                          });
+                        });
+                      },
                       iconSize: 27,
                       icon: Icon(Icons.add_circle_outline, 
                         color: Theme.of(context).colorScheme.primary,
@@ -208,66 +217,75 @@ class _WalletPage extends State<WalletPage> {
   }
 
   _fetchWalletEvent() {
-    String subId = generate64RandomHexChars();
-    Subscription subscription = Subscription(
-      subId, 
-      [Filter(
-        kinds: [37375],
-        authors: [pub],
-      )], 
-      (event) async {
-        if (!nip07Support() && login == 'nip07'){
-          return;
-        }
-
-        if (event != null) {
-          if (event['tags'].where((e) => e[0] == 'deleted').toList().length > 0) {
+    String walletStr = widget.prefs.getString('wallet') ?? '';
+    if (walletStr != '') {
+      setState(() {
+        wallet = Map.castFrom(jsonDecode(walletStr));
+      }); 
+      _fetchTokenEvent();
+    }
+    else {
+      String subId = generate64RandomHexChars();
+      Subscription subscription = Subscription(
+        subId, 
+        [Filter(
+          kinds: [37375],
+          authors: [pub],
+        )], 
+        (event) async {
+          if (!nip07Support() && login == 'nip07'){
             return;
           }
-          String walletId = event['tags'].where((e) => e[0] == 'd').toList()[0][1];
-          var sameId = wallets.where((w) => w['id'] == walletId).toList();
-          if (sameId.isNotEmpty) {
-            if(int.parse(sameId[0]['created_at']!) > event['created_at']) {
+
+          if (event != null) {
+            if (event['tags'].where((e) => e[0] == 'deleted').toList().length > 0) {
               return;
             }
-            else {
-              wallets.remove(sameId[0]);
+            String walletId = event['tags'].where((e) => e[0] == 'd').toList()[0][1];
+            var sameId = wallets.where((w) => w['id'] == walletId).toList();
+            if (sameId.isNotEmpty) {
+              if(int.parse(sameId[0]['created_at']!) > event['created_at']) {
+                return;
+              }
+              else {
+                wallets.remove(sameId[0]);
+              }
             }
-          }
 
-          dynamic decryptMsg = jsonDecode(login == 'nsec' ?
-            (await Nip4.decryptContent(event['content'], pub, pub, priv)):
-            (await nip07nip04Decrypt(pub, event['content']))!
-          );
-          String name = decryptMsg.where((e) => e[0] == 'name').toList()[0][1].toString();
-          String privWal = decryptMsg.where((e) => e[0] == 'privkey').toList()[0][1].toString();
-          wallets.add({
-            'id': walletId,
-            'created_at': event['created_at'].toString(),
-            'name': name, 
-            'balance': decryptMsg.where((e) => e[0] == 'balance').toList()[0][1],
-            'mints': jsonEncode(event['tags'].where((e) => e[0] == 'mint').map((v) => {'url':v[1],'amount':0}).toList()),
-            'privkey': privWal,
-            'selected': 'false'
+            dynamic decryptMsg = jsonDecode(login == 'nsec' ?
+              (await Nip4.decryptContent(event['content'], pub, pub, priv)):
+              (await nip07nip04Decrypt(pub, event['content']))!
+            );
+            String name = decryptMsg.where((e) => e[0] == 'name').toList()[0][1].toString();
+            String privWal = decryptMsg.where((e) => e[0] == 'privkey').toList()[0][1].toString();
+            wallets.add({
+              'id': walletId,
+              'created_at': event['created_at'].toString(),
+              'name': name, 
+              'balance': decryptMsg.where((e) => e[0] == 'balance').toList()[0][1],
+              'mints': jsonEncode(event['tags'].where((e) => e[0] == 'mint').map((v) => {'url':v[1],'amount':0}).toList()),
+              'privkey': privWal,
+              'selected': 'false'
+            });
+          }
+        }
+      );
+      relayPool.subscribe(subscription);
+      context.loaderOverlay.show();
+      Future.delayed(const Duration(seconds: 3), () {
+        relayPool.unsubscribe(subId);
+        if (mounted) {
+          context.loaderOverlay.hide();
+          walletManager(context, widget.prefs, wallets, relayPool, (value) {
+            setState(() {
+              wallet = wallets.where((e) => e['selected'] == 'true').toList()[0];
+            });
+            
+            _fetchTokenEvent();
           });
         }
-      }
-    );
-    relayPool.subscribe(subscription);
-    context.loaderOverlay.show();
-    Future.delayed(const Duration(seconds: 3), () {
-      relayPool.unsubscribe(subId);
-      if (mounted) {
-        context.loaderOverlay.hide();
-        walletManager(context, widget.prefs, wallets, relayPool, (value) {
-          setState(() {
-            wallet = wallets.where((e) => e['selected'] == 'true').toList()[0];
-          });
-          
-          _fetchTokenEvent();
-        });
-      }
-    });
+      });
+    }
   }
 
   _fetchTokenEvent() {
@@ -290,6 +308,9 @@ class _WalletPage extends State<WalletPage> {
           if (event['kind'] == 7375) {
             String mintURL = event['tags'].where((e) => e[0] == 'mint').toList()[0][1];
             dynamic mintJson = jsonDecode(wallet['mints']!);
+            if (!mintJson.contains(mintURL)) {
+              mintJson.add(mintURL);
+            }
             int mintIdx =  mintJson.indexWhere((m) => m['url'] == mintURL);
             for (var proof in decryptMsg['proofs']) {
               wallet['balance'] = (int.parse(wallet['balance']!) + proof['amount']).toString();
@@ -305,9 +326,25 @@ class _WalletPage extends State<WalletPage> {
     );
     wallet['balance'] = '0';
     relayPool.subscribe(subscription);
-    Future.delayed(const Duration(seconds: 5), () {
+    context.loaderOverlay.show();
+    Future.delayed(const Duration(seconds: 3), () {
       relayPool.unsubscribe(subId);
-      widget.prefs.setString('wallet', jsonEncode(wallet));
+      context.loaderOverlay.hide();
+      final dynamic mints = jsonDecode(wallet['mints']!);
+      if (mints.isEmpty) {
+        mints.add({'url':'https://mint.lnwasanee.com', 'amount':0});
+        if (mounted) {
+          mintManager(context, mints, (value) {
+            setState(() {
+              wallet['mints'] = jsonEncode(mints);
+              widget.prefs.setString('wallet', jsonEncode(wallet));
+            });
+          });
+        }
+      }
+      else {
+        widget.prefs.setString('wallet', jsonEncode(wallet));
+      }
     });
   }
 
