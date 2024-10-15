@@ -1,14 +1,23 @@
 import 'dart:convert';
+import 'dart:js_interop';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:iconly/iconly.dart';
 import 'package:loader_overlay/loader_overlay.dart';
 import 'package:nostr_core_dart/nostr.dart';
 
+import 'package:cashu_dart/model/invoice.dart';
+import 'package:cashu_dart/model/invoice_listener.dart';
+import 'package:cashu_dart/model/mint_model.dart';
+
 import 'package:lnwcash/utils/relay.dart';
 import 'package:lnwcash/utils/subscription.dart';
+import 'package:lnwcash/utils/nip07.dart';
+import 'package:lnwcash/utils/cashu.dart';
 
 import 'package:lnwcash/widgets/profilecard.dart';
 import 'package:lnwcash/widgets/transactionview.dart';
@@ -17,8 +26,6 @@ import 'package:lnwcash/widgets/paymentbottom.dart';
 import 'package:lnwcash/widgets/relaymanager.dart';
 import 'package:lnwcash/widgets/walletmanager.dart';
 import 'package:lnwcash/widgets/mintmanager.dart';
-
-import 'package:lnwcash/utils/nip07.dart';
 
 class WalletPage extends StatefulWidget {
   const WalletPage({super.key, required this.prefs});
@@ -29,7 +36,7 @@ class WalletPage extends StatefulWidget {
   State<StatefulWidget> createState() => _WalletPage();
 }
 
-class _WalletPage extends State<WalletPage> {
+class _WalletPage extends State<WalletPage> with CashuListener {
 
   final RelayPool relayPool = RelayPool();
 
@@ -42,6 +49,16 @@ class _WalletPage extends State<WalletPage> {
   
   List<Map<String,dynamic>> proofs = [];
 
+  SnackBar clipboardSnackBar = SnackBar(
+    content: const Text('Copy Invoice to Clipboard'),
+    duration: const Duration(milliseconds: 3000),
+    width: 200, // Width of the SnackBar.
+    behavior: SnackBarBehavior.floating,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(10.0),
+    ),
+  );
+
   @override
   void initState() {
     super.initState();
@@ -53,6 +70,8 @@ class _WalletPage extends State<WalletPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       initRelay(); 
     });
+
+    Cashu.shared.addListener(this);
   }
 
   void initRelay() async {
@@ -72,10 +91,13 @@ class _WalletPage extends State<WalletPage> {
     widget.prefs.setStringList('relays', relayPool.getRelayURL());
 
     await _fetchWalletEvent();
+    print(wallet);
     await _mintSetup();
     await _fetchTokenEvent();
     
     widget.prefs.setString('wallet', jsonEncode(wallet));
+    _updateWallet();
+    Cashu.shared.initialize();
   }
 
   @override
@@ -127,9 +149,9 @@ class _WalletPage extends State<WalletPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  FadeInLeft(child:_sendReceive(context, title: 'Receive', icon: Icon(IconlyLight.arrow_down, size: 30, color: Theme.of(context).colorScheme.secondary,))),
+                  FadeInLeft(child:_sendreceive(context, title: 'Receive', icon: Icon(IconlyLight.arrow_down, size: 30, color: Theme.of(context).colorScheme.secondary,))),
                   const SizedBox(width:16,),
-                  FadeInRight(child:_sendReceive(context, title: 'Send', icon: Icon(IconlyLight.arrow_up, size: 30, color: Theme.of(context).colorScheme.secondary,))),
+                  FadeInRight(child:_sendreceive(context, title: 'Send', icon: Icon(IconlyLight.arrow_up, size: 30, color: Theme.of(context).colorScheme.secondary,))),
                 ],
               ),
               const SizedBox(height: 25,),
@@ -214,7 +236,30 @@ class _WalletPage extends State<WalletPage> {
     );
   }
 
-  Future<void>_fetchWalletEvent() async {
+  @override
+  void handleInvoicePaid(Receipt receipt) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: Colors.green,
+        content: Text("Receive ${receipt.amount} sat via lightning!", 
+          style: const TextStyle(color: Colors.white),
+        ),
+        duration: const Duration(seconds: 3),
+        width: 220, // Width of the SnackBar.
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10.0),
+        ),
+      )
+    );
+  }
+
+  @override
+  void handleBalanceChanged(IMint mint) {
+    // updateUI();
+  }
+
+  Future<void> _fetchWalletEvent() async {
     String walletStr = widget.prefs.getString('wallet') ?? '';
     if (walletStr != '') {
       setState(() {
@@ -238,6 +283,7 @@ class _WalletPage extends State<WalletPage> {
             if (event['tags'].where((e) => e[0] == 'deleted').toList().length > 0) {
               return;
             }
+            print(event);
             String walletId = event['tags'].where((e) => e[0] == 'd').toList()[0][1];
             var sameId = wallets.where((w) => w['id'] == walletId).toList();
             if (sameId.isNotEmpty) {
@@ -253,6 +299,7 @@ class _WalletPage extends State<WalletPage> {
               (await Nip4.decryptContent(event['content'], pub, pub, priv)):
               (await nip07nip04Decrypt(pub, event['content']))!
             );
+            print(decryptMsg);
             String name = decryptMsg.where((e) => e[0] == 'name').toList()[0][1].toString();
             String privWal = decryptMsg.where((e) => e[0] == 'privkey').toList()[0][1].toString();
             
@@ -282,6 +329,59 @@ class _WalletPage extends State<WalletPage> {
     }
   }
 
+  Future<void> _updateWallet() async {
+    String content = jsonEncode([
+        ["name", wallet['name']],
+        ["balance", wallet['balance'], "sat"],
+        ["privkey", wallet['privkey']],
+        ['unit','sat'],
+    ]);
+
+    List<List<String>> tags = [];
+    tags.add(['d', wallet['id']!]);
+    for(var relay in relayPool.getRelayURL()) {
+      tags.add(['relay', relay]);  
+    }
+    for(var mint in jsonDecode(wallet['mints']!)) {
+      tags.add(['mint', mint['url']]);
+    }
+
+    Event event;      
+    if (widget.prefs.getString('loginType') == 'nsec') {
+      String pub = widget.prefs.getString('pub')!;
+      String priv = widget.prefs.getString('priv')!;
+      String encryptedContent = await Nip4.encryptContent(content, pub, pub, priv);
+      event = await Event.from(
+        kind: 37375, 
+        tags: tags, 
+        content: encryptedContent,
+        pubkey: pub,
+        privkey: priv,
+      );
+    } else {
+      String pub = widget.prefs.getString('pub')!;
+      String? encryptedContent = await nip07nip04Encrypt(pub, content);
+      JSObject? signEvt = await nip07Sign(
+        currentUnixTimestampSeconds(), 
+        37375, 
+        tags, 
+        encryptedContent!,
+      );
+      dynamic signEvent = jsonDecode(jsonStringfy(signEvt!));
+      event = Event(
+        signEvent['id'],
+        signEvent['pubkey'],
+        signEvent['created_at'],
+        signEvent['kind'],
+        tags,
+        signEvent['content'],
+        signEvent['sig'],
+      );
+    }
+
+    relayPool.send(event.serialize());
+  }
+
   Future<void> _mintSetup() async {
     final dynamic mints = jsonDecode(wallet['mints']!);
     if (mints.isEmpty) {
@@ -291,6 +391,7 @@ class _WalletPage extends State<WalletPage> {
         wallet['mints'] = jsonEncode(mints);
       });
     }
+    await Cashu.shared.setupMints(mints);
   }
 
   Future<void> _fetchTokenEvent() async {
@@ -337,7 +438,7 @@ class _WalletPage extends State<WalletPage> {
     if (mounted) context.loaderOverlay.hide();
   }
 
-  _sendReceive(BuildContext context, {required Icon icon, required String title}) {
+  _sendreceive(BuildContext context, {required String title, required Icon icon}) {
     return SizedBox(
       width: 100,
       height: 80,
@@ -347,7 +448,72 @@ class _WalletPage extends State<WalletPage> {
           padding: const EdgeInsets.all(0),
           side: BorderSide(color: Theme.of(context).colorScheme.secondary),
         ),
-        onPressed: () { paymentButtomSheet(context);},
+        onPressed: () async { 
+          var action = await receiveButtomSheet(context, wallet);
+          
+          if (action == 'lightning') {
+            Receipt receipt = await Cashu.shared.getLastestInvoice();
+
+            GlobalKey dialogKey = GlobalKey();
+            // ignore: use_build_context_synchronously
+            showDialog(context: context,
+              builder: (context) => ScaffoldMessenger(
+                key: dialogKey,
+                child: Builder(
+                  builder: (context) => Scaffold(
+                    backgroundColor: Colors.transparent,
+                    body: AlertDialog(
+                      title: const Text('Lightning invoice'),
+                      content: SizedBox(
+                        width: 300.0,
+                        height: 300.0,
+                        child: QrImageView(
+                          data: 'lightning:${receipt.request}',
+                          version: QrVersions.auto,
+                          size: 200.0,
+                        ),
+                      ),
+                      actions: [
+                        Row(
+                          children: [
+                            TextButton(
+                              onPressed: () async {
+                                await Clipboard.setData(ClipboardData(text: receipt.request));
+                                // ignore: use_build_context_synchronously
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: const Text("Copy to clipboard!"),
+                                    duration: const Duration(seconds: 3),
+                                    width: 200, // Width of the SnackBar.
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10.0),
+                                    ),
+                                  )
+                                );
+                              }, 
+                              child: const Text('Copy', style: TextStyle(fontSize: 16))
+                            ),
+                            const Expanded(child: SizedBox(height: 10,)),
+                            TextButton(
+                              onPressed: () {Navigator.of(context).pop();}, 
+                              child: const Text('Close', style: TextStyle(fontSize: 16))
+                            ),
+                          ]
+                        ),
+                      ],
+                    )
+                  ),
+                ),
+              ),
+            );
+
+            await Cashu.shared.invoicePaid.future;
+            if (dialogKey.currentContext != null) {
+              Navigator.of(dialogKey.currentContext!).pop();
+            }
+          }
+        },
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [

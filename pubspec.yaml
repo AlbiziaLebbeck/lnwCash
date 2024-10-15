@@ -40,9 +40,12 @@ dependencies:
 
   nostr_core_dart:
     path: ./nostr-dart-main
+  cashu_dart:
+    path: ./cashu-dart-main
   shared_preferences: ^2.3.2
   js: ^0.6.7
   loader_overlay: ^4.0.1
+  qr_flutter: ^4.1.0
 
 
 dev_dependencies:

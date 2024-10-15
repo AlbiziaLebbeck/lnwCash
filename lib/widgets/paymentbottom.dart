@@ -1,27 +1,48 @@
+import 'dart:convert';
+
+import 'package:cashu_dart/business/proof/token_helper.dart';
+import 'package:cashu_dart/model/mint_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lnwcash/utils/cashu.dart';
 
-paymentButtomSheet(context){
+import 'package:cashu_dart/business/transaction/transaction_helper.dart';
+
+Future<dynamic> receiveButtomSheet(context, wallet) async{
   return showModalBottomSheet(context: context,
-    builder: (context) => const PaymentButtomSheet()    
+    builder: (context,) => ReceiveButtomSheet(wallet)    
   );
 }
 
 // enum PaymentType { ecash, lightning }
 
-class PaymentButtomSheet extends StatefulWidget {
-  const PaymentButtomSheet({super.key});
+class ReceiveButtomSheet extends StatefulWidget {
+  const ReceiveButtomSheet(this.wallet, {super.key});
+
+  final Map<String,String> wallet;
 
   @override
-  State<PaymentButtomSheet> createState() => _PaymentButtomSheet();
+  State<ReceiveButtomSheet> createState() => _PaymentButtomSheet();
 }
 
-class _PaymentButtomSheet extends State<PaymentButtomSheet> {
+class _PaymentButtomSheet extends State<ReceiveButtomSheet> {
 
   int _selected = 0;
+  String currentMint = Cashu.shared.mints[0].mintURL;
 
   final _ecashFormKey = GlobalKey<FormState>();
   final _lightningFormKey = GlobalKey<FormState>();
+
+  final TextEditingController _ecashController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+  
+    // setState(() {
+    //   mints = jsonDecode(widget.wallet['mints']!);
+    // });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -77,6 +98,7 @@ class _PaymentButtomSheet extends State<PaymentButtomSheet> {
             child: Column(
               children: [
                 TextFormField(
+                  controller: _ecashController,
                   keyboardType: TextInputType.multiline,
                   maxLines: 4,
                   decoration: InputDecoration(
@@ -88,7 +110,29 @@ class _PaymentButtomSheet extends State<PaymentButtomSheet> {
                       borderRadius: BorderRadius.circular(25),
                     ),
                     labelText: 'Paste a cashu token',
+                    suffixIcon: Padding(
+                      padding: const EdgeInsetsDirectional.only(top: 70, end: 5),
+                      child: IconButton(
+                        onPressed: () async {
+                          final ecash = await Clipboard.getData('text/plain');
+                          if (ecash != null) {
+                            _ecashController.text = ecash.text ?? '';
+                          }
+                        },
+                        icon: const Icon(Icons.paste),
+                      ),
+                    ),
                   ),
+                  validator: (value) {
+                    if (value!.isEmpty) return 'Token is empty';
+                    if (value!.startsWith('cashuB')) return 'V4 is not supported';
+                    final token = TokenHelper.getDecodedToken(value);
+                    if (token == null) return 'Invalid token';
+
+                    Cashu.shared.redeemEcash(token: token);
+
+                    return null;
+                  }
                 ),
                 const SizedBox(height: 25,),
                 FilledButton(
@@ -96,7 +140,10 @@ class _PaymentButtomSheet extends State<PaymentButtomSheet> {
                     // backgroundColor: Theme.of(context).colorScheme.primaryFixedDim,
                     minimumSize: const Size(double.infinity, 55),
                   ),
-                  onPressed: () {
+                  onPressed: () async {
+                    if(_ecashFormKey.currentState!.validate()) {
+                      Navigator.of(context).pop('cashu');
+                    }
                   },
                   child: const Text('Receive', style: TextStyle(fontSize: 16)),
                 )
@@ -120,6 +167,20 @@ class _PaymentButtomSheet extends State<PaymentButtomSheet> {
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(25)),
                     labelText: 'Amount (sats)',
                   ),
+                  validator: (value) {
+                    if (value == "") {
+                      return "Please fill amount of sats";
+                    }
+
+                    int amount = int.parse(value!);
+                    if (amount <= 0) {
+                      return "Amount should greater than 0"; 
+                    }
+                    
+                    IMint mint = Cashu.shared.getMint(currentMint);
+                    Cashu.shared.createLightningInvoice(mint: mint, amount: amount, context: context);
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 10,),
                 DropdownButtonFormField(
@@ -130,12 +191,19 @@ class _PaymentButtomSheet extends State<PaymentButtomSheet> {
                     ),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(25))
                   ),
-                  value: 'mint1',
-                  items: const <DropdownMenuItem<String>>[
-                    DropdownMenuItem(value: 'mint1', child: Text('mint1')),
-                    DropdownMenuItem(value: 'mint2', child: Text('mint2'))
-                  ],
-                  onChanged: (value) => {},
+                  value: Cashu.shared.mints[0].mintURL,
+                  items: List.generate(
+                    Cashu.shared.mints.length,
+                    (idx) => DropdownMenuItem(
+                      value: Cashu.shared.mints[idx].mintURL, 
+                      child: Text(Cashu.shared.mints[idx].mintURL),
+                    ),
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      currentMint = value!;
+                    });
+                  },
                 ),
                 const SizedBox(height: 25,),
                 FilledButton(
@@ -145,6 +213,9 @@ class _PaymentButtomSheet extends State<PaymentButtomSheet> {
                     textStyle: const TextStyle(fontSize: 16)
                   ),
                   onPressed: () {
+                    if(_lightningFormKey.currentState!.validate()) {
+                      Navigator.of(context).pop('lightning');
+                    }
                   },
                   child: const Text('Receive'),
                 )

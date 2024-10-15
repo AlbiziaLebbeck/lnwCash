@@ -81,7 +81,8 @@ class TransactionView extends StatelessWidget {
         children: [
           transactionData['type']== 'send' ? const Icon(Icons.call_made, color: Colors.red,) : const Icon(Icons.call_received, color: Colors.green),
           const SizedBox(width: 8),
-          Expanded(child: Text(
+          Expanded(
+            child: Text(
               '${(transactionData['type']== 'send' ? '-':'') + transactionData['amount']} sats', 
                 style: TextStyle(
                 fontSize: 16, 
