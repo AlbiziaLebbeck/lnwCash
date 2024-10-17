@@ -252,11 +252,12 @@ class _WalletPage extends State<WalletPage> with CashuListener {
         ),
       )
     );
+    widget.prefs.setString('proofs', Cashu.shared.ProofSerializer());
   }
 
   @override
   void handleBalanceChanged(IMint mint) {
-    // updateUI();
+    widget.prefs.setString('proofs', Cashu.shared.ProofSerializer());
   }
 
   Future<void> _fetchWalletEvent() async {
@@ -452,7 +453,11 @@ class _WalletPage extends State<WalletPage> with CashuListener {
           var action = await receiveButtomSheet(context, wallet);
           
           if (action == 'lightning') {
+            // ignore: use_build_context_synchronously
+            context.loaderOverlay.show();
             Receipt receipt = await Cashu.shared.getLastestInvoice();
+            // ignore: use_build_context_synchronously
+            context.loaderOverlay.hide();
 
             GlobalKey dialogKey = GlobalKey();
             // ignore: use_build_context_synchronously

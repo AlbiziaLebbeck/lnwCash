@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:cashu_dart/business/mint/mint_helper.dart';
 import 'package:cashu_dart/business/proof/proof_helper.dart';
@@ -35,7 +36,7 @@ class Cashu {
 
   Future<void> initialize() async {
     invoiceChecker = TaskScheduler(task: _periodicCheck)..start();
-    Future.delayed(const Duration(seconds: 3), () => invoiceChecker?.initComplete());
+    Future.delayed(const Duration(seconds: 10), () => invoiceChecker?.initComplete());
   }
 
   Future<void> setupMints(dynamic defaultMint) async {
@@ -111,8 +112,8 @@ class Cashu {
     );
 
     if (response.isSuccess) {
-      notifyListenerForBalanceChanged(mint);
       constructProofs(mint, response.data, secrets, rs);
+      notifyListenerForBalanceChanged(mint);
     }
   }
 
@@ -162,12 +163,12 @@ class Cashu {
       blindedMessages: blindedMessages,
     );
     if (response.isSuccess) {
-      notifyListenerForPaidSuccess(invoice);
-      _invoices.remove(invoice);
       if (response.data.isNotEmpty) {
         invoicePaid.complete();
         constructProofs(mint, response.data, secrets, rs);
+        notifyListenerForPaidSuccess(invoice);
       }
+      _invoices.remove(invoice);
     } else {
       if (response.errorMsg.contains('quote already issued')) {
         _invoices.remove(invoice);
@@ -209,6 +210,24 @@ class Cashu {
       );
       proofs[mint]?.add(unblindingProof);
     }
+  }
+
+  String ProofSerializer() {
+    Map<String,String> proofsToJson = {};
+    proofs.forEach((mint, prfs) {
+      List<String> prfsToJson = [];
+      prfs.forEach((prf) {
+        String prfToJson;
+        if(prf.dleq != null && prf.dleq!.isNotEmpty) {
+          prfToJson = '{"id":"${prf.id}","amount":"${prf.amount},"secret":"${prf.secret}","C","${prf.C}","dleq":{"e":"${prf.dleq!['e']}","s":"${prf.dleq!['s']}","r":"${prf.dleq!['r']}"}}';
+        } else {
+          prfToJson = '{"id":"${prf.id}","amount":"${prf.amount},"secret":"${prf.secret}","C","${prf.C}"}';
+        }
+        prfsToJson.add(prfToJson);
+      });
+      proofsToJson[mint.mintURL] =  jsonEncode(prfsToJson);
+    });
+    return jsonEncode(proofsToJson);
   }
 
 
