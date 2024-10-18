@@ -7,9 +7,8 @@ import 'package:lnwcash/widgets/avatar_image.dart';
 import 'package:lnwcash/utils/relay.dart';
 
 class ProfileCard extends StatefulWidget {
-  const ProfileCard(this._relayPool, this._pub, {super.key});
+  const ProfileCard(this._pub, {super.key});
 
-  final RelayPool _relayPool;
   final String _pub;
 
   @override
@@ -30,13 +29,12 @@ class _ProfileCard extends State<ProfileCard> {
   void _loadPreference() async {
     
     Subscription subscription = Subscription(
-      generate64RandomHexChars(), 
-      [Filter(
+      filters: [Filter(
         kinds: [0],
         authors: [widget._pub],
         limit: 10,
       )], 
-      (event) {
+      onEvent: (event) {
         dynamic content = jsonDecode(event['content']); 
         setState(() {
           name = content["name"];
@@ -44,7 +42,7 @@ class _ProfileCard extends State<ProfileCard> {
         });
       }
     );
-    widget._relayPool.subscribe(subscription);
+    RelayPool.shared.subscribe(subscription);
   }
 
   @override

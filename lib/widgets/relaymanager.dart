@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:lnwcash/utils/relay.dart';
 
-Future<void> relayManager(context, relayPool) async {
+Future<void> relayManager(context) async {
   return showModalBottomSheet(context: context, 
-    builder: (context) => RelayManager(relayPool)
+    builder: (context) => RelayManager()
   );
 
 }
 
 class RelayManager extends StatefulWidget {
-  const RelayManager(this.relayPool, {super.key});
-
-  final RelayPool relayPool;
+  const RelayManager({super.key});
 
   @override
   State<RelayManager> createState() => _RelatManager();
@@ -21,21 +19,10 @@ class _RelatManager extends State<RelayManager>{
 
   final _relayKey = GlobalKey<FormState>();
 
-  late final RelayPool relayPool;
-
-  @override
-  void initState() {
-    super.initState();
-
-    setState(() {
-      relayPool = widget.relayPool;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
 
-    List<String> relaysURL = relayPool.getRelayURL();
+    List<String> relaysURL = RelayPool.shared.getRelayURL();
 
     return Container(
       width: double.infinity,
@@ -84,7 +71,7 @@ class _RelatManager extends State<RelayManager>{
                     }
 
                     setState(() {
-                      relayPool.add(value);
+                      RelayPool.shared.add(value);
                     });
 
                     return null;
@@ -141,7 +128,7 @@ class _RelatManager extends State<RelayManager>{
                         onPressed: () {
                           if (relaysURL.length > 1) {
                             setState(() {
-                              relayPool.remove(relaysURL[index]);
+                              RelayPool.shared.remove(relaysURL[index]);
                             });
                           }
                           else {

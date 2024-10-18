@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:js_interop';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -16,7 +15,9 @@ import 'package:cashu_dart/model/mint_model.dart';
 
 import 'package:lnwcash/utils/relay.dart';
 import 'package:lnwcash/utils/subscription.dart';
+import 'package:lnwcash/utils/nip01.dart';
 import 'package:lnwcash/utils/nip07.dart';
+import 'package:lnwcash/utils/nip60.dart';
 import 'package:lnwcash/utils/cashu.dart';
 
 import 'package:lnwcash/widgets/profilecard.dart';
@@ -37,8 +38,6 @@ class WalletPage extends StatefulWidget {
 }
 
 class _WalletPage extends State<WalletPage> with CashuListener {
-
-  final RelayPool relayPool = RelayPool();
 
   late final String pub;
   late final String priv;
@@ -64,10 +63,10 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     super.initState();
 
     pub = widget.prefs.getString('pub') ?? '';
-    priv = widget.prefs.getString('priv') ?? '';
-    login = widget.prefs.getString('loginType') ?? ''; 
+    priv = widget.prefs.getString('priv') ?? ''; 
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await Signer.shared.initialize(priv);
       initRelay(); 
     });
 
@@ -78,25 +77,25 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     List<String> prefsRelays = widget.prefs.getStringList('relays') ?? [];
     for (String url in prefsRelays)
     {
-      relayPool.add(url);
+      RelayPool.shared.add(url);
     }
     if (prefsRelays.isEmpty) {
-      relayPool.add('wss://relay.siamstr.com');
-      relayPool.add('wss://relay.notoshi.win');
+      RelayPool.shared.add('wss://relay.siamstr.com');
+      RelayPool.shared.add('wss://relay.notoshi.win');
     }
     if (prefsRelays.isEmpty) {
-      await relayManager(context, relayPool);
+      await relayManager(context);
     }
 
-    widget.prefs.setStringList('relays', relayPool.getRelayURL());
+    widget.prefs.setStringList('relays', RelayPool.shared.getRelayURL());
 
     await _fetchWalletEvent();
-    print(wallet);
+    //print(wallet);
     await _mintSetup();
-    await _fetchTokenEvent();
+    // await _fetchTokenEvent();
     
-    widget.prefs.setString('wallet', jsonEncode(wallet));
-    _updateWallet();
+    widget.prefs.setString('wallet', jsonEncode(Nip60.shared.wallet));
+    Nip60.shared.updateWallet();
     Cashu.shared.initialize();
   }
 
@@ -121,7 +120,7 @@ class _WalletPage extends State<WalletPage> with CashuListener {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 5,),
-              ProfileCard(relayPool, pub),
+              ProfileCard(pub),
               const SizedBox(height: 25,),
               FadeIn(
                 child: Center(
@@ -252,158 +251,54 @@ class _WalletPage extends State<WalletPage> with CashuListener {
         ),
       )
     );
-    widget.prefs.setString('proofs', Cashu.shared.ProofSerializer());
+    widget.prefs.setString('proofs', Cashu.shared.proofSerializer());
   }
 
   @override
   void handleBalanceChanged(IMint mint) {
-    widget.prefs.setString('proofs', Cashu.shared.ProofSerializer());
+    widget.prefs.setString('proofs', Cashu.shared.proofSerializer());
   }
 
   Future<void> _fetchWalletEvent() async {
     String walletStr = widget.prefs.getString('wallet') ?? '';
     if (walletStr != '') {
       setState(() {
-        wallet = Map.castFrom(jsonDecode(walletStr));
+        Nip60.shared.wallet = Map.castFrom(jsonDecode(walletStr));
       });
     }
-    else {
-      String subId = generate64RandomHexChars();
-      Subscription subscription = Subscription(
-        subId, 
-        [Filter(
-          kinds: [37375],
-          authors: [pub],
-        )], 
-        (event) async {
-          if (!nip07Support() && login == 'nip07'){
-            return;
-          }
 
-          if (event != null) {
-            if (event['tags'].where((e) => e[0] == 'deleted').toList().length > 0) {
-              return;
-            }
-            print(event);
-            String walletId = event['tags'].where((e) => e[0] == 'd').toList()[0][1];
-            var sameId = wallets.where((w) => w['id'] == walletId).toList();
-            if (sameId.isNotEmpty) {
-              if(int.parse(sameId[0]['created_at']!) > event['created_at']) {
-                return;
-              }
-              else {
-                wallets.remove(sameId[0]);
-              }
-            }
-
-            dynamic decryptMsg = jsonDecode(login == 'nsec' ?
-              (await Nip4.decryptContent(event['content'], pub, pub, priv)):
-              (await nip07nip04Decrypt(pub, event['content']))!
-            );
-            print(decryptMsg);
-            String name = decryptMsg.where((e) => e[0] == 'name').toList()[0][1].toString();
-            String privWal = decryptMsg.where((e) => e[0] == 'privkey').toList()[0][1].toString();
-            
-            wallets.add({
-              'id': walletId,
-              'created_at': event['created_at'].toString(),
-              'name': name, 
-              'balance': decryptMsg.where((e) => e[0] == 'balance').toList()[0][1],
-              'mints': jsonEncode(event['tags'].where((e) => e[0] == 'mint').map((v) => {'url':v[1],'amount':0}).toList()),
-              'privkey': privWal,
-              'selected': 'false'
-            });
-          }
-        }
-      );
-      relayPool.subscribe(subscription);
-      context.loaderOverlay.show();
-      await Future.delayed(const Duration(seconds: 3));
-      relayPool.unsubscribe(subId);
-      if (mounted) {
-        context.loaderOverlay.hide();
-        await walletManager(context, widget.prefs, wallets, relayPool);
-        setState(() {
-          wallet = wallets.where((e) => e['selected'] == 'true').toList()[0];
-        });
-      }
+    Subscription subscription = Nip60.shared.fetchWalletEvent();
+    context.loaderOverlay.show();
+    await subscription.timeout.future;
+    RelayPool.shared.unsubscribe(subscription.id);
+    if (mounted) context.loaderOverlay.hide();
+    
+    if (Nip60.shared.wallet.isEmpty) {
+      if (mounted) await walletManager(context);
     }
-  }
-
-  Future<void> _updateWallet() async {
-    String content = jsonEncode([
-        ["name", wallet['name']],
-        ["balance", wallet['balance'], "sat"],
-        ["privkey", wallet['privkey']],
-        ['unit','sat'],
-    ]);
-
-    List<List<String>> tags = [];
-    tags.add(['d', wallet['id']!]);
-    for(var relay in relayPool.getRelayURL()) {
-      tags.add(['relay', relay]);  
-    }
-    for(var mint in jsonDecode(wallet['mints']!)) {
-      tags.add(['mint', mint['url']]);
-    }
-
-    Event event;      
-    if (widget.prefs.getString('loginType') == 'nsec') {
-      String pub = widget.prefs.getString('pub')!;
-      String priv = widget.prefs.getString('priv')!;
-      String encryptedContent = await Nip4.encryptContent(content, pub, pub, priv);
-      event = await Event.from(
-        kind: 37375, 
-        tags: tags, 
-        content: encryptedContent,
-        pubkey: pub,
-        privkey: priv,
-      );
-    } else {
-      String pub = widget.prefs.getString('pub')!;
-      String? encryptedContent = await nip07nip04Encrypt(pub, content);
-      JSObject? signEvt = await nip07Sign(
-        currentUnixTimestampSeconds(), 
-        37375, 
-        tags, 
-        encryptedContent!,
-      );
-      dynamic signEvent = jsonDecode(jsonStringfy(signEvt!));
-      event = Event(
-        signEvent['id'],
-        signEvent['pubkey'],
-        signEvent['created_at'],
-        signEvent['kind'],
-        tags,
-        signEvent['content'],
-        signEvent['sig'],
-      );
-    }
-
-    relayPool.send(event.serialize());
+    
+    setState(() {});
   }
 
   Future<void> _mintSetup() async {
-    final dynamic mints = jsonDecode(wallet['mints']!);
+    final dynamic mints = jsonDecode(Nip60.shared.wallet['mints']!);
     if (mints.isEmpty) {
       mints.add({'url':'https://mint.lnwasanee.com', 'amount':0});
       await mintManager(context, mints);
       setState(() {
-        wallet['mints'] = jsonEncode(mints);
+        Nip60.shared.wallet['mints'] = jsonEncode(mints);
       });
     }
     await Cashu.shared.setupMints(mints);
   }
 
-  Future<void> _fetchTokenEvent() async {
-    String subId = generate64RandomHexChars(); 
-    Subscription subscription = Subscription(
-      subId, 
-      [Filter(
+  Future<void> _fetchTokenEvent() async { 
+    Subscription subscription = Subscription( 
+      filters: [Filter(
         kinds: [7375,7376],
         authors: [pub],
       )], 
-      (event) async {
+      onEvent: (event) async {
         String tokenWalId = event['tags'].where((e) => e[0] == 'a').toList()[0][1].split(':')[2];
         
         if (tokenWalId == wallet['id']) {
@@ -431,12 +326,8 @@ class _WalletPage extends State<WalletPage> with CashuListener {
         }
       }
     );
-    wallet['balance'] = '0';
-    relayPool.subscribe(subscription);
-    if (mounted) context.loaderOverlay.show();
-    await Future.delayed(const Duration(seconds: 3));
-    relayPool.unsubscribe(subId);
-    if (mounted) context.loaderOverlay.hide();
+    // wallet['balance'] = '0';
+    RelayPool.shared.subscribe(subscription);
   }
 
   _sendreceive(BuildContext context, {required String title, required Icon icon}) {

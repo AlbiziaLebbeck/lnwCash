@@ -6,6 +6,9 @@ import 'package:web/web.dart';
 import 'package:lnwcash/utils/subscription.dart';
 
 class RelayPool {
+  static final RelayPool shared = RelayPool._internal();
+  RelayPool._internal();
+
   final Map<String, Relay> _relays = {};
 
   final Map<String, Subscription> _subscriptions = {};
@@ -43,10 +46,11 @@ class RelayPool {
     send(subscription.request());
     if (timeout > 0) {
       Future.delayed(Duration(seconds: timeout), () {
-        if (!subscription.getEvent)
-        {
-          subscription.onEvent(null);
-        }
+        // if (!subscription.getEvent)
+        // {
+          subscription.timeout.complete();
+          //unsubscribe(subscription.id);
+        // }
       });
     }
     return subscription.id;
@@ -55,7 +59,7 @@ class RelayPool {
   void unsubscribe(String id) {
     final subscription = _subscriptions.remove(id);
     if (subscription != null) {
-      nostr.Close(subscription.id);
+      send(nostr.Close(subscription.id).serialize());
     }
   }
 
@@ -77,19 +81,19 @@ class RelayPool {
     
     final messageType = message[0];
     final subId = message[1];
-    if (messageType == 'EVENT')
-    {
-      final event = message[2];
-      Subscription? subscription = _subscriptions[subId];
-      if (subscription != null) {
+    Subscription? subscription = _subscriptions[subId];
+    if (subscription != null) {
+      if (messageType == 'EVENT')
+      {
+        final event = message[2];
         if (!subscription.eventId.contains(event['id'])){
           subscription.getEvent = true;
           subscription.eventId.add(event['id']);
           subscription.onEvent(event);
         }
+      } else if (messageType == 'EOSE') {
+
       }
-    } else if (messageType == 'EOSE') {
-      
     }
   }
 }

@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:cashu_dart/business/mint/mint_helper.dart';
-import 'package:cashu_dart/business/proof/proof_helper.dart';
 import 'package:cashu_dart/core/DHKE_helper.dart';
 import 'package:cashu_dart/core/mint_actions.dart';
 import 'package:cashu_dart/core/nuts/nut_00.dart';
@@ -10,7 +9,6 @@ import 'package:cashu_dart/model/invoice.dart';
 import 'package:cashu_dart/model/invoice_listener.dart';
 import 'package:cashu_dart/model/keyset_info.dart';
 import 'package:cashu_dart/model/mint_model.dart';
-import 'package:cashu_dart/model/unblinding_data.dart';
 import 'package:cashu_dart/utils/network/response.dart';
 import 'package:cashu_dart/utils/task_scheduler.dart';
 import 'package:cashu_dart/utils/tools.dart';
@@ -208,15 +206,17 @@ class Cashu {
         C: ecPointToHex(C!),
         dleq: dleq,
       );
-      proofs[mint]?.add(unblindingProof);
+      if (proofs[mint]!.where((proof) => proof.secret == unblindingProof.secret).isEmpty) {
+        proofs[mint]?.add(unblindingProof);
+      }
     }
   }
 
-  String ProofSerializer() {
+  String proofSerializer() {
     Map<String,String> proofsToJson = {};
     proofs.forEach((mint, prfs) {
       List<String> prfsToJson = [];
-      prfs.forEach((prf) {
+      for (var prf in prfs) {
         String prfToJson;
         if(prf.dleq != null && prf.dleq!.isNotEmpty) {
           prfToJson = '{"id":"${prf.id}","amount":"${prf.amount},"secret":"${prf.secret}","C","${prf.C}","dleq":{"e":"${prf.dleq!['e']}","s":"${prf.dleq!['s']}","r":"${prf.dleq!['r']}"}}';
@@ -224,7 +224,7 @@ class Cashu {
           prfToJson = '{"id":"${prf.id}","amount":"${prf.amount},"secret":"${prf.secret}","C","${prf.C}"}';
         }
         prfsToJson.add(prfToJson);
-      });
+      }
       proofsToJson[mint.mintURL] =  jsonEncode(prfsToJson);
     });
     return jsonEncode(proofsToJson);
