@@ -13,6 +13,7 @@ import 'package:cashu_dart/utils/network/response.dart';
 import 'package:cashu_dart/utils/task_scheduler.dart';
 import 'package:cashu_dart/utils/tools.dart';
 import 'package:flutter/material.dart';
+import 'package:lnwcash/utils/nip60.dart';
 // ignore: depend_on_referenced_packages
 import 'package:pointycastle/export.dart';
 
@@ -37,15 +38,24 @@ class Cashu {
     Future.delayed(const Duration(seconds: 10), () => invoiceChecker?.initComplete());
   }
 
-  Future<void> setupMints(dynamic defaultMint) async {
-    for (var mintData in defaultMint){
-      final maxNutsVersion = await MintHelper.getMaxNutsVersion(mintData['url']);
-      IMint mint = IMint(mintURL: mintData['url'], maxNutsVersion: maxNutsVersion);
-      await MintHelper.updateMintInfoFromRemote(mint);
-      mints.add(mint);
+  Future<bool> addMint(String mintURL) async {
+    final maxNutsVersion = await MintHelper.getMaxNutsVersion(mintURL);
+    
+    IMint mint = IMint(mintURL: mintURL, maxNutsVersion: maxNutsVersion);
+    final response = await mint.requestMintInfoAction(mintURL: mint.mintURL);
+    if (!response.isSuccess) return false;
+    mint.info = response.data;
+    if (mint.name.isEmpty)  mint.name = response.data.name;
+    
+    mints.add(mint);
+    keysets[mint] = await MintHelper.fetchKeysetFromRemote(mint);
+    proofs[mint] = <Proof>[];
+    return true;
+  }
 
-      keysets[mint] = await MintHelper.fetchKeysetFromRemote(mint);
-      proofs[mint] = <Proof>[];
+  Future<void> setupMints(dynamic defaultMint) async {
+    for (var mintURL in defaultMint){
+      await addMint(mintURL);
     }
   }
 
@@ -184,6 +194,11 @@ class Cashu {
     List<String> secrets,
     List<BigInt> rs,
   ) {
+    Map<String,dynamic> tokenEventContent = {
+      'mint': mint.mintURL,
+      'proofs': <Map<String,dynamic>>[],
+    };
+
     for (int i = 0; i < signatures.length; i++) {
       final promise = signatures[i];
       final secret = secrets[i];
@@ -209,25 +224,60 @@ class Cashu {
       if (proofs[mint]!.where((proof) => proof.secret == unblindingProof.secret).isEmpty) {
         proofs[mint]?.add(unblindingProof);
       }
+
+      Map<String,dynamic> tokenProof = {
+        'id': unblindingProof.id,
+        'amount': int.parse(unblindingProof.amount),
+        'secret': unblindingProof.secret,
+        'C': unblindingProof.C,
+      };
+      tokenEventContent['proofs'].add(tokenProof);
     }
+
+    Nip60.shared.createTokenEvent(tokenEventContent);
   }
 
   String proofSerializer() {
-    Map<String,String> proofsToJson = {};
+    Map<String,List<Map<String,dynamic>>> proofsToJson = {};
     proofs.forEach((mint, prfs) {
-      List<String> prfsToJson = [];
+      List<Map<String,dynamic>> prfsToJson = [];
       for (var prf in prfs) {
-        String prfToJson;
-        if(prf.dleq != null && prf.dleq!.isNotEmpty) {
-          prfToJson = '{"id":"${prf.id}","amount":"${prf.amount},"secret":"${prf.secret}","C","${prf.C}","dleq":{"e":"${prf.dleq!['e']}","s":"${prf.dleq!['s']}","r":"${prf.dleq!['r']}"}}';
-        } else {
-          prfToJson = '{"id":"${prf.id}","amount":"${prf.amount},"secret":"${prf.secret}","C","${prf.C}"}';
-        }
-        prfsToJson.add(prfToJson);
+        Map<String,dynamic> strPrf = {
+          'id': prf.id,
+          'amount': prf.amount,
+          'secret': prf.secret,
+          'C': prf.C,
+        };
+        // if(prf.dleq != null && prf.dleq!.isNotEmpty) {
+        //   prfToJson = '{\"id":\"${prf.id}\",\"amount\":\"${prf.amount},\"secret\":\"${prf.secret}\",\"C\",\"${prf.C}\",\"dleq":{"e":"${prf.dleq!['e']}","s":"${prf.dleq!['s']}","r":"${prf.dleq!['r']}"}}';
+        // }
+        prfsToJson.add(strPrf);
       }
-      proofsToJson[mint.mintURL] =  jsonEncode(prfsToJson);
+      proofsToJson[mint.mintURL] =  prfsToJson;
     });
     return jsonEncode(proofsToJson);
+  }
+
+  Future<void> proofDeserializer (String jsonProofs) async {
+    Map<String,dynamic> getProofs = Map.castFrom(jsonDecode(jsonProofs));
+    List<String> mintStr = mints.map((m) => m.mintURL).toList(); 
+     for (var mintUrl in getProofs.keys) {
+      if (!mintStr.contains(mintUrl)) {
+        bool ok = await addMint(mintUrl);
+        if (!ok) continue;
+      }
+
+      IMint mint = getMint(mintUrl);
+
+      for (var prf in getProofs[mintUrl]!) {
+        proofs[mint]!.add(Proof(
+          id: prf['id']!, 
+          amount: prf['amount']!, 
+          secret: prf['secret']!, 
+          C: prf['C']!,
+        ));
+      }
+     }
   }
 
 

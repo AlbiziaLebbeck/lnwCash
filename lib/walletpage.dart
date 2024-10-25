@@ -2,13 +2,14 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:nostr_core_dart/nostr.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:iconly/iconly.dart';
 import 'package:loader_overlay/loader_overlay.dart';
-import 'package:nostr_core_dart/nostr.dart';
 
+import 'package:cashu_dart/core/nuts/nut_00.dart';
 import 'package:cashu_dart/model/invoice.dart';
 import 'package:cashu_dart/model/invoice_listener.dart';
 import 'package:cashu_dart/model/mint_model.dart';
@@ -16,7 +17,6 @@ import 'package:cashu_dart/model/mint_model.dart';
 import 'package:lnwcash/utils/relay.dart';
 import 'package:lnwcash/utils/subscription.dart';
 import 'package:lnwcash/utils/nip01.dart';
-import 'package:lnwcash/utils/nip07.dart';
 import 'package:lnwcash/utils/nip60.dart';
 import 'package:lnwcash/utils/cashu.dart';
 
@@ -42,9 +42,11 @@ class _WalletPage extends State<WalletPage> with CashuListener {
   late final String pub;
   late final String priv;
   late final String login;
+
+  num balance = 0;
   
-  List<Map<String,String>> wallets = [];
-  Map<String,String> wallet = {'balance': '0','mints': '[]'};
+  // List<Map<String,String>> wallets = [];
+  // Map<String,String> wallet = {'balance': '0','mints': '[]'};
   
   List<Map<String,dynamic>> proofs = [];
 
@@ -92,7 +94,8 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     await _fetchWalletEvent();
     //print(wallet);
     await _mintSetup();
-    // await _fetchTokenEvent();
+    await _fetchProofEvent();
+    setState(() {});
     
     widget.prefs.setString('wallet', jsonEncode(Nip60.shared.wallet));
     Nip60.shared.updateWallet();
@@ -134,7 +137,7 @@ class _WalletPage extends State<WalletPage> with CashuListener {
               ),
               FadeIn(
                 child: Center(
-                  child: Text('${(wallet['balance'] as String)} sats', 
+                  child: Text('$balance sats', 
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.primary,
                       fontSize: 45, 
@@ -162,12 +165,12 @@ class _WalletPage extends State<WalletPage> with CashuListener {
                     Text("Mints", style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600),),
                     IconButton(
                       onPressed: () async {
-                        final dynamic mints = jsonDecode(wallet['mints']!);
-                        await mintManager(context, mints);
-                        setState(() {
-                          wallet['mints'] = jsonEncode(mints);
-                        });
-                        widget.prefs.setString('wallet', jsonEncode(wallet));
+                        await mintManager(context);
+                        setState(() {});
+                        Nip60.shared.wallet['mints'] =  jsonEncode(Cashu.shared.mints.map((m) => m.mintURL).toList());
+                        widget.prefs.setString('wallet', jsonEncode(Nip60.shared.wallet));
+                        Nip60.shared.updateWallet();
+                        setState(() {});
                       },
                       iconSize: 27,
                       icon: Icon(Icons.add_circle_outline, 
@@ -178,7 +181,7 @@ class _WalletPage extends State<WalletPage> with CashuListener {
                 ),
               ),
               const SizedBox(height: 15,),
-              getMintCards(context, jsonDecode(wallet['mints']!)),
+              getMintCards(context),
               const SizedBox(height: 25,),
               Container(
                 padding: const EdgeInsets.only(left: 15, right: 15),
@@ -252,11 +255,24 @@ class _WalletPage extends State<WalletPage> with CashuListener {
       )
     );
     widget.prefs.setString('proofs', Cashu.shared.proofSerializer());
+    setState(() {
+      balance = 0;
+      for (IMint mint in Cashu.shared.mints) {
+        balance += Cashu.shared.proofs[mint]!.totalAmount;
+      }
+    });
   }
 
   @override
   void handleBalanceChanged(IMint mint) {
     widget.prefs.setString('proofs', Cashu.shared.proofSerializer());
+    
+    setState(() {
+      balance = 0;
+      for (IMint mint in Cashu.shared.mints) {
+        balance += Cashu.shared.proofs[mint]!.totalAmount;
+      }
+    });
   }
 
   Future<void> _fetchWalletEvent() async {
@@ -277,57 +293,80 @@ class _WalletPage extends State<WalletPage> with CashuListener {
       if (mounted) await walletManager(context);
     }
     
-    setState(() {});
+    setState(() {
+      balance = num.parse(Nip60.shared.wallet['balance']!);
+    });
   }
 
   Future<void> _mintSetup() async {
     final dynamic mints = jsonDecode(Nip60.shared.wallet['mints']!);
     if (mints.isEmpty) {
-      mints.add({'url':'https://mint.lnwasanee.com', 'amount':0});
-      await mintManager(context, mints);
-      setState(() {
-        Nip60.shared.wallet['mints'] = jsonEncode(mints);
-      });
+      await Cashu.shared.addMint('https://mint.lnw.cash');
+      // ignore: use_build_context_synchronously
+      await mintManager(context);
+    } else {
+      await Cashu.shared.setupMints(mints);
     }
-    await Cashu.shared.setupMints(mints);
+
+    Nip60.shared.wallet['mints'] =  jsonEncode(Cashu.shared.mints.map((m) => m.mintURL).toList());
   }
 
-  Future<void> _fetchTokenEvent() async { 
+  Future<void> _fetchProofEvent() async { 
+    String proofsStr = widget.prefs.getString('proofs') ?? '';
+    if (proofsStr != '') {
+      await Cashu.shared.proofDeserializer(proofsStr);
+
+      setState(() {
+        balance = 0;
+        for (IMint mint in Cashu.shared.mints) {
+          balance += Cashu.shared.proofs[mint]!.totalAmount;
+        }
+        Nip60.shared.wallet['balance'] = balance.toString();
+      });
+    }
+
     Subscription subscription = Subscription( 
       filters: [Filter(
-        kinds: [7375,7376],
+        kinds: [7375],
         authors: [pub],
       )], 
       onEvent: (event) async {
-        String tokenWalId = event['tags'].where((e) => e[0] == 'a').toList()[0][1].split(':')[2];
-        
-        if (tokenWalId == wallet['id']) {
-          dynamic decryptMsg = jsonDecode(login == 'nsec' ?
-            (await Nip4.decode(event['content'], pub, priv))!.content:
-            (await nip07nip04Decrypt(pub, event['content']))!
-          );
+        if (event['tags'].where((e) => e[0] == 'a').toList().isEmpty) return;
+        String aTag = event['tags'].where((e) => e[0] == 'a').toList()[0][1];
 
-          if (event['kind'] == 7375) {
-            String mintURL = event['tags'].where((e) => e[0] == 'mint').toList()[0][1];
-            dynamic mintJson = jsonDecode(wallet['mints']!);
-            if (!mintJson.contains(mintURL)) {
-              mintJson.add(mintURL);
+        if (aTag.split(':').length < 3) return;
+        if (aTag.split(':')[2] != Nip60.shared.wallet['id']) return;
+          
+        dynamic decryptMsg = jsonDecode((await Signer.shared.nip44Decrypt(event['content']))!);
+        IMint mint = Cashu.shared.getMint(decryptMsg['mint']);
+        bool addProof = false;
+        for (var proof in decryptMsg['proofs']){
+          if (Cashu.shared.proofs[mint]!.where((prf) => prf.secret == proof['secret']).isEmpty) {
+            Cashu.shared.proofs[mint]!.add(
+              Proof(
+                id: proof['id'], 
+                amount: proof['amount'].toString(), 
+                secret: proof['secret'], 
+                C: proof['C']),
+            );
+            addProof = true;
+          } 
+        }
+        if (addProof) {
+          widget.prefs.setString('proofs', Cashu.shared.proofSerializer());
+          setState(() {
+            balance = 0;
+            for (IMint mint in Cashu.shared.mints) {
+              balance += Cashu.shared.proofs[mint]!.totalAmount;
             }
-            int mintIdx =  mintJson.indexWhere((m) => m['url'] == mintURL);
-            for (var proof in decryptMsg['proofs']) {
-              wallet['balance'] = (int.parse(wallet['balance']!) + proof['amount']).toString();
-              mintJson[mintIdx]['amount'] += proof['amount'];
-              proofs.add(proof);
-            }
-            setState(() {
-              wallet['mints'] = jsonEncode(mintJson);
-            });
-          }
+            Nip60.shared.wallet['balance'] = balance.toString();
+          });
         }
       }
     );
-    // wallet['balance'] = '0';
-    RelayPool.shared.subscribe(subscription);
+    RelayPool.shared.subscribe(subscription, timeout: 3);
+    await subscription.timeout.future;
+    RelayPool.shared.unsubscribe(subscription.id);
   }
 
   _sendreceive(BuildContext context, {required String title, required Icon icon}) {
@@ -341,7 +380,7 @@ class _WalletPage extends State<WalletPage> with CashuListener {
           side: BorderSide(color: Theme.of(context).colorScheme.secondary),
         ),
         onPressed: () async { 
-          var action = await receiveButtomSheet(context, wallet);
+          var action = await receiveButtomSheet(context);
           
           if (action == 'lightning') {
             // ignore: use_build_context_synchronously

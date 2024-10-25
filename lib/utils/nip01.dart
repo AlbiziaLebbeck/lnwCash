@@ -34,6 +34,20 @@ class Signer {
       nip07nip04Decrypt(peerPub, content):
       Nip4.decryptContent(content, peerPub, pub!, priv!); 
   }
+
+  Future<String?> nip44Encrypt(String content, {String? peerPub}) {
+    peerPub ??= pub!;
+    return isNip07 ? 
+      nip07nip44Encrypt(peerPub, content): 
+      Nip4.encryptContent(content, peerPub, pub!, priv!);
+  }
+
+  Future<String?> nip44Decrypt(String content, {String? peerPub}) {
+    peerPub ??= pub!;
+    return isNip07 ? 
+      nip07nip44Decrypt(peerPub, content):
+      Nip44.decryptContent(content, peerPub, pub!, priv!); 
+  }
 }
 
 Future<Event?> createEvent ({
@@ -55,7 +69,7 @@ Future<Event?> createEvent ({
     
     JSObject? signEvt = await nip07Sign(
       currentUnixTimestampSeconds(), 
-      37375, 
+      kind, 
       tags, 
       content,
     );

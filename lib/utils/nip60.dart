@@ -14,6 +14,7 @@ class Nip60 {
   Map<String,String> wallet = {};
 
   createWallet(String name) async {
+    String privkey = generate64RandomHexChars();
     const chars = 'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz1234567890';
     Random rnd = Random();
     String walletId = String.fromCharCodes(Iterable.generate(16, (_) => chars.codeUnitAt(rnd.nextInt(chars.length))));
@@ -26,11 +27,11 @@ class Nip60 {
     String content = jsonEncode([
         ["name", name],
         ["balance", "0", "sat"],
-        ["privkey", generate64RandomHexChars()],
+        ["privkey", privkey],
         ['unit','sat'],
     ]);
 
-    String? encryptedContent = await Signer.shared.nip04Encrypt(content);
+    String? encryptedContent = await Signer.shared.nip44Encrypt(content);
 
     Event? event = await createEvent(
       kind: 37375, 
@@ -41,11 +42,12 @@ class Nip60 {
     bool succeed = RelayPool.shared.send(event!.serialize());
     if (succeed) {
       wallets.add({
-        'id': event.id,
+        'id': walletId,
         'created_at': event.createdAt.toString(),
         'name': name,
         'balance': '0',
         'mints': '[]',
+        'privkey': privkey,
       });
     }
   }
@@ -75,9 +77,9 @@ class Nip60 {
       )], 
       onEvent: (event) async {
         if (event != null) {
-          if (event['tags'].where((e) => e[0] == 'deleted').toList().length > 0) {
-            return;
-          }
+          if (event['tags'].where((e) => e[0] == 'deleted').toList().isNotEmpty) return;
+          if (event['tags'].where((e) => e[0] == 'd').toList().isEmpty) return;
+
           String walletId = event['tags'].where((e) => e[0] == 'd').toList()[0][1];
           var sameId = wallets.where((w) => w['id'] == walletId).toList();
           if (sameId.isNotEmpty) {
@@ -89,16 +91,22 @@ class Nip60 {
             }
           }
 
-          dynamic decryptMsg = jsonDecode((await Signer.shared.nip04Decrypt(event['content']))!);
-          String name = decryptMsg.where((e) => e[0] == 'name').toList()[0][1].toString();
-          String privWal = decryptMsg.where((e) => e[0] == 'privkey').toList()[0][1].toString();
-          
+          dynamic decryptMsg = jsonDecode((await Signer.shared.nip44Decrypt(event['content']))!);
+          print(decryptMsg);
+          String name = event['tags'].where((e) => e[0] == 'name').toList().isNotEmpty ?
+            event['tags'].where((e) => e[0] == 'name').toList()[0][1].toString() :
+            decryptMsg.where((e) => e[0] == 'name').toList()[0][1].toString();
+
+          String balance = decryptMsg.where((e) => e[0] == 'balance').toList()[0][1];
+          String privWal = decryptMsg.where((e) => e[0] == 'privkey').toList().isNotEmpty ?
+            decryptMsg.where((e) => e[0] == 'privkey').toList()[0][1].toString() : '';
+
           wallets.add({
             'id': walletId,
             'created_at': event['created_at'].toString(),
             'name': name, 
-            'balance': decryptMsg.where((e) => e[0] == 'balance').toList()[0][1],
-            'mints': jsonEncode(event['tags'].where((e) => e[0] == 'mint').map((v) => {'url':v[1],'amount':0}).toList()),
+            'balance': balance,
+            'mints': jsonEncode(event['tags'].where((e) => e[0] == 'mint').map((v) => v[1]).toList()),
             'privkey': privWal,
             'selected': 'false'
           });
@@ -129,16 +137,31 @@ class Nip60 {
       tags.add(['relay', relay]);  
     }
     for(var mint in jsonDecode(wallet['mints']!)) {
-      tags.add(['mint', mint['url']]);
+      tags.add(['mint', mint]);
     }
 
-    String? encryptedContent = await Signer.shared.nip04Encrypt(content);
+    String? encryptedContent = await Signer.shared.nip44Encrypt(content);
 
     Event? event = await createEvent(
       kind: 37375, 
       tags: tags, 
       content: encryptedContent!,
     );      
+
+    RelayPool.shared.send(event!.serialize());
+  }
+
+  Future<void> createTokenEvent(Map<String,dynamic> content) async {
+    String? encryptedContent = await Signer.shared.nip44Encrypt(jsonEncode(content));
+
+    List<List<String>> tags = [];
+    tags.add(['a', '37375:${Signer.shared.pub}:${wallet['id']}']);
+
+    Event? event = await createEvent(
+      kind: 7375, 
+      tags: tags, 
+      content: encryptedContent!,
+    );
 
     RelayPool.shared.send(event!.serialize());
   }

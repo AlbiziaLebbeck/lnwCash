@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:lnwcash/utils/cashu.dart';
 
-Future<void> mintManager(context, mints) async {
+Future<void> mintManager(context) async {
   return showModalBottomSheet(context: context, 
-    builder: (context) => MintManager(mints),
+    builder: (context) => const MintManager(),
   );
 }
 
 class MintManager extends StatefulWidget {
-  const MintManager(this.mints, {super.key});
-
-  final dynamic mints;
+  const MintManager({super.key});
 
   @override
   State<MintManager> createState() => _MintManager();
@@ -17,13 +16,12 @@ class MintManager extends StatefulWidget {
 
 class _MintManager extends State<MintManager>{
   
-  late dynamic mints;
   final _mintKey = GlobalKey<FormState>();
+  String? addingMint;
   
   @override
   void initState() {
     super.initState();
-    mints = widget.mints;
   }
 
   @override
@@ -70,13 +68,11 @@ class _MintManager extends State<MintManager>{
                       return "Mint url is required";
                     }
 
-                    if (mints.where((e) => e['url'] == value).isNotEmpty) {
+                    if (Cashu.shared.mints.where((e) => e.mintURL == value).isNotEmpty) {
                       return "This mint is already added";
                     }
 
-                    setState(() {
-                      mints.add({'url':value, 'amount':0});
-                    });
+                    addingMint = value;
 
                     return null;
                   },
@@ -86,8 +82,26 @@ class _MintManager extends State<MintManager>{
                   style: FilledButton.styleFrom(
                     minimumSize: const Size(double.infinity, 55),
                   ),
-                  onPressed: () {
+                  onPressed: () async {
                     if(_mintKey.currentState!.validate()) {
+                      if (addingMint != null) {
+                        bool isAdded = await Cashu.shared.addMint(addingMint!);
+                        if (isAdded) {
+                          setState(() {});
+                        } else {
+                          // ignore: use_build_context_synchronously
+                          showDialog(context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Error!'),
+                              content: const Text('This mint is not found.'),
+                              actions: [
+                                TextButton(onPressed: () {Navigator.of(context).pop();}, child: const Text('OK')),
+                              ],
+                            )
+                          );
+                        }
+                        addingMint = null;
+                      }
                       _mintKey.currentState!.reset();
                     }
                   },
@@ -98,10 +112,10 @@ class _MintManager extends State<MintManager>{
           ),
           const SizedBox(height: 15,),
           SizedBox(
-            height: MediaQuery.of(context).size.height/2 -190,
+            height: MediaQuery.of(context).size.height/2 - 235,
             child: ListView(
               scrollDirection: Axis.vertical,
-              children: List.generate(mints.length, 
+              children: List.generate(Cashu.shared.mints.length, 
                 (index) => Container(
                   margin: const EdgeInsets.only(bottom: 8, right: 3),
                   padding: const EdgeInsets.only(top: 4, bottom: 4, left: 32, right: 16),
@@ -119,7 +133,7 @@ class _MintManager extends State<MintManager>{
                   ),
                   child: Row(
                     children: [
-                      Expanded(child: Text(mints[index]['url'], 
+                      Expanded(child: Text(Cashu.shared.mints[index].mintURL, 
                             style: TextStyle(
                             fontSize: 14, 
                             fontWeight: FontWeight.w600,
@@ -130,22 +144,21 @@ class _MintManager extends State<MintManager>{
                       const SizedBox(width: 5),
                       IconButton(
                         onPressed: () {
-                          if (mints.length > 1) {
-                            setState(() {
-                              mints.removeAt(index);
-                            });
-                          }
-                          else {
-                            showDialog(context: context,
-                              builder: (context) => AlertDialog(
-                                title: const Text('Warning!'),
-                                content: const Text('You need at least one mint.'),
-                                actions: [
-                                  TextButton(onPressed: () {Navigator.of(context).pop();}, child: const Text('OK')),
-                                ],
-                              )
-                            );
-                          }
+                          showDialog(context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Warning!!'),
+                              content: const Text('Are you sure that you want to delete this mint?'),
+                              actions: [
+                                FilledButton(onPressed: () {
+                                  setState(() {
+                                    Cashu.shared.mints.removeAt(index);
+                                  });
+                                  Navigator.of(context).pop();
+                                }, child: const Text('Yes')),
+                                TextButton(onPressed: () {Navigator.of(context).pop();}, child: const Text('No')),
+                              ],
+                            )
+                          );
                         }, 
                         icon: Icon(Icons.delete_forever, size: 32, color: Theme.of(context).colorScheme.error,),
                       )
@@ -154,6 +167,12 @@ class _MintManager extends State<MintManager>{
                 ),
               )
             )
+          ),
+          const SizedBox(height: 15),
+          TextButton(child: const Text("Done", style: TextStyle(fontSize: 16)),
+            onPressed: () async {
+              Navigator.of(context).pop();
+            }
           ),
         ]
       ),

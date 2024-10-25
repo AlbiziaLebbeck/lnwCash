@@ -1,25 +1,19 @@
-import 'dart:convert';
-
 import 'package:cashu_dart/business/proof/token_helper.dart';
 import 'package:cashu_dart/model/mint_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lnwcash/utils/cashu.dart';
 
-import 'package:cashu_dart/business/transaction/transaction_helper.dart';
-
-Future<dynamic> receiveButtomSheet(context, wallet) async{
+Future<dynamic> receiveButtomSheet(context) async{
   return showModalBottomSheet(context: context,
-    builder: (context,) => ReceiveButtomSheet(wallet)    
+    builder: (context,) => const ReceiveButtomSheet()    
   );
 }
 
 // enum PaymentType { ecash, lightning }
 
 class ReceiveButtomSheet extends StatefulWidget {
-  const ReceiveButtomSheet(this.wallet, {super.key});
-
-  final Map<String,String> wallet;
+  const ReceiveButtomSheet({super.key});
 
   @override
   State<ReceiveButtomSheet> createState() => _PaymentButtomSheet();
@@ -38,10 +32,6 @@ class _PaymentButtomSheet extends State<ReceiveButtomSheet> {
   @override
   void initState() {
     super.initState();
-  
-    // setState(() {
-    //   mints = jsonDecode(widget.wallet['mints']!);
-    // });
   }
 
   @override
@@ -125,7 +115,7 @@ class _PaymentButtomSheet extends State<ReceiveButtomSheet> {
                   ),
                   validator: (value) {
                     if (value!.isEmpty) return 'Token is empty';
-                    if (value!.startsWith('cashuB')) return 'V4 is not supported';
+                    if (value.startsWith('cashuB')) return 'V4 is not supported';
                     final token = TokenHelper.getDecodedToken(value);
                     if (token == null) return 'Invalid token';
 
