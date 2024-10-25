@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:cashu_dart/core/nuts/nut_00.dart';
+import 'package:cashu_dart/model/mint_model.dart';
+import 'package:lnwcash/utils/cashu.dart';
 import 'package:lnwcash/utils/nip01.dart';
 import 'package:lnwcash/utils/relay.dart';
 import 'package:lnwcash/utils/subscription.dart';
@@ -92,7 +95,6 @@ class Nip60 {
           }
 
           dynamic decryptMsg = jsonDecode((await Signer.shared.nip44Decrypt(event['content']))!);
-          print(decryptMsg);
           String name = event['tags'].where((e) => e[0] == 'name').toList().isNotEmpty ?
             event['tags'].where((e) => e[0] == 'name').toList()[0][1].toString() :
             decryptMsg.where((e) => e[0] == 'name').toList()[0][1].toString();
@@ -164,5 +166,38 @@ class Nip60 {
     );
 
     RelayPool.shared.send(event!.serialize());
+  }
+
+  Subscription fetchProofEvent() {
+    Subscription subscription = Subscription( 
+      filters: [Filter(
+        kinds: [7375],
+        authors: [Signer.shared.pub!],
+      )], 
+      onEvent: (event) async {
+        if (event['tags'].where((e) => e[0] == 'a').toList().isEmpty) return;
+        String aTag = event['tags'].where((e) => e[0] == 'a').toList()[0][1];
+
+        if (aTag.split(':').length < 3) return;
+        if (aTag.split(':')[2] != Nip60.shared.wallet['id']) return;
+          
+        dynamic decryptMsg = jsonDecode((await Signer.shared.nip44Decrypt(event['content']))!);
+        IMint mint = Cashu.shared.getMint(decryptMsg['mint']);
+        for (var proof in decryptMsg['proofs']){
+          if (Cashu.shared.proofs[mint]!.where((prf) => prf.secret == proof['secret']).isEmpty) {
+            Cashu.shared.proofs[mint]!.add(
+              Proof(
+                id: proof['id'], 
+                amount: proof['amount'].toString(), 
+                secret: proof['secret'], 
+                C: proof['C']),
+            );
+          } 
+        }
+      }
+    );
+    
+    RelayPool.shared.subscribe(subscription, timeout: 3);
+    return subscription;
   }
 }
