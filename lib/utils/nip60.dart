@@ -153,7 +153,19 @@ class Nip60 {
     RelayPool.shared.send(event!.serialize());
   }
 
-  Future<void> createTokenEvent(Map<String,dynamic> content) async {
+  Future<void> createTokenEvent(List<Proof> proofs, String mintUrl) async {
+    Map<String,dynamic> content = {
+      'mint': mintUrl,
+      'proofs': <Map<String,dynamic>>[],
+    };
+
+    content['proofs'] = proofs.map((p) =>{
+      'id': p.id,
+      'amount': int.parse(p.amount),
+      'secret': p.secret,
+      'C': p.C,
+    }.cast<String,dynamic>()).toList();
+
     String? encryptedContent = await Signer.shared.nip44Encrypt(jsonEncode(content));
 
     List<List<String>> tags = [];

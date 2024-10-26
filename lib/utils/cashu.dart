@@ -76,14 +76,17 @@ class Cashu {
       final mint = Cashu.shared.getMint(entry.mint);
 
       final redeemProofs = [...entry.proofs];
-      swapProofs(
+      final newProofs = await swapProofs(
         mint: mint,
         swapProofs: redeemProofs,
       );
+      _updateProofs(newProofs!, mint);
+      Nip60.shared.createTokenEvent(newProofs, mint.mintURL);
+      notifyListenerForBalanceChanged(mint);
     }
   }
 
-  Future<void> swapProofs({
+  Future<List<Proof>?> swapProofs({
     required IMint mint,
     required List<Proof> swapProofs,
     int? supportAmount,
@@ -120,9 +123,10 @@ class Cashu {
     );
 
     if (response.isSuccess) {
-      constructProofs(mint, response.data, secrets, rs);
-      notifyListenerForBalanceChanged(mint);
+      return constructProofs(mint, response.data, secrets, rs);
     }
+
+    return null;
   }
 
   Future<Receipt?> createLightningInvoice({
@@ -173,7 +177,9 @@ class Cashu {
     if (response.isSuccess) {
       if (response.data.isNotEmpty) {
         invoicePaid.complete();
-        constructProofs(mint, response.data, secrets, rs);
+        final newProofs = constructProofs(mint, response.data, secrets, rs);
+        _updateProofs(newProofs, mint);
+        Nip60.shared.createTokenEvent(newProofs, mint.mintURL);
         notifyListenerForPaidSuccess(invoice);
       }
       _invoices.remove(invoice);
@@ -188,16 +194,13 @@ class Cashu {
     _pendingInvoices.remove(invoice);
   }
 
-  constructProofs(
+  List<Proof> constructProofs(
     IMint mint,
     List<BlindedSignature> signatures,
     List<String> secrets,
     List<BigInt> rs,
   ) {
-    Map<String,dynamic> tokenEventContent = {
-      'mint': mint.mintURL,
-      'proofs': <Map<String,dynamic>>[],
-    };
+    List<Proof> constructedProofs = [];
 
     for (int i = 0; i < signatures.length; i++) {
       final promise = signatures[i];
@@ -221,20 +224,17 @@ class Cashu {
         C: ecPointToHex(C!),
         dleq: dleq,
       );
-      if (proofs[mint]!.where((proof) => proof.secret == unblindingProof.secret).isEmpty) {
-        proofs[mint]?.add(unblindingProof);
-      }
-
-      Map<String,dynamic> tokenProof = {
-        'id': unblindingProof.id,
-        'amount': int.parse(unblindingProof.amount),
-        'secret': unblindingProof.secret,
-        'C': unblindingProof.C,
-      };
-      tokenEventContent['proofs'].add(tokenProof);
+      constructedProofs.add(unblindingProof);
     }
+    return constructedProofs;
+  }
 
-    Nip60.shared.createTokenEvent(tokenEventContent);
+  void _updateProofs(List<Proof> updateProofs, IMint mint) {
+    for (var updateProof in updateProofs) {
+      if (proofs[mint]!.where((proof) => proof.secret == updateProof.secret).isEmpty) {
+        proofs[mint]?.add(updateProof);
+      }
+    }
   }
 
   String proofSerializer() {

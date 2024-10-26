@@ -250,6 +250,19 @@ class _WalletPage extends State<WalletPage> with CashuListener {
 
   @override
   void handleInvoicePaid(Receipt receipt) {
+    
+    widget.prefs.setString('proofs', Cashu.shared.proofSerializer());
+    setState(() {
+      balance = 0;
+      for (IMint mint in Cashu.shared.mints) {
+        balance += Cashu.shared.proofs[mint]!.totalAmount;
+      }
+    });
+
+    Nip60.shared.wallet['balance'] = balance.toString();
+    widget.prefs.setString('wallet', jsonEncode(Nip60.shared.wallet));
+    Nip60.shared.updateWallet();
+  
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         backgroundColor: Colors.green,
@@ -264,25 +277,43 @@ class _WalletPage extends State<WalletPage> with CashuListener {
         ),
       )
     );
-    widget.prefs.setString('proofs', Cashu.shared.proofSerializer());
-    setState(() {
-      balance = 0;
-      for (IMint mint in Cashu.shared.mints) {
-        balance += Cashu.shared.proofs[mint]!.totalAmount;
-      }
-    });
   }
 
   @override
   void handleBalanceChanged(IMint mint) {
     widget.prefs.setString('proofs', Cashu.shared.proofSerializer());
     
+    num oldBalance = balance;
+
     setState(() {
       balance = 0;
       for (IMint mint in Cashu.shared.mints) {
         balance += Cashu.shared.proofs[mint]!.totalAmount;
       }
     });
+
+    Nip60.shared.wallet['balance'] = balance.toString();
+    widget.prefs.setString('wallet', jsonEncode(Nip60.shared.wallet));
+    Nip60.shared.updateWallet();
+
+    String snackText = balance > oldBalance ? 
+      "Receive ${balance - oldBalance} sat via ecash" :
+      "Send ${oldBalance - balance} sat via ecash";  
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: balance > oldBalance ?Colors.green : Colors.red,
+        content: Text(snackText, 
+          style: const TextStyle(color: Colors.white),
+        ),
+        duration: const Duration(seconds: 3),
+        width: 220, // Width of the SnackBar.
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10.0),
+        ),
+      )
+    );
   }
 
   Future<void> _fetchWalletEvent() async {
