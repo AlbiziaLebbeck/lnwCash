@@ -261,10 +261,6 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     Nip60.shared.wallet['balance'] = balance.toString();
     Nip60.shared.updateWallet();
 
-    widget.prefs.setString('wallet', jsonEncode(Nip60.shared.wallet));
-    widget.prefs.setString('proofs', jsonEncode(Nip60.shared.proofEvents));
-    widget.prefs.setString('history', jsonEncode(Nip60.shared.histories));
-
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         backgroundColor: Colors.green,
@@ -279,6 +275,10 @@ class _WalletPage extends State<WalletPage> with CashuListener {
         ),
       )
     );
+
+    widget.prefs.setString('wallet', jsonEncode(Nip60.shared.wallet));
+    widget.prefs.setString('proofs', jsonEncode(Nip60.shared.proofEvents));
+    widget.prefs.setString('history', jsonEncode(Nip60.shared.histories));
   }
 
   @override
@@ -294,10 +294,6 @@ class _WalletPage extends State<WalletPage> with CashuListener {
 
     Nip60.shared.wallet['balance'] = balance.toString();
     Nip60.shared.updateWallet();
-
-    widget.prefs.setString('wallet', jsonEncode(Nip60.shared.wallet));
-    widget.prefs.setString('proofs', jsonEncode(Nip60.shared.proofEvents));
-    widget.prefs.setString('history', jsonEncode(Nip60.shared.histories));
 
     String snackText = balance > oldBalance ? 
       "Receive ${balance - oldBalance} sat via ecash" :
@@ -317,6 +313,10 @@ class _WalletPage extends State<WalletPage> with CashuListener {
         ),
       )
     );
+
+    widget.prefs.setString('wallet', jsonEncode(Nip60.shared.wallet));
+    widget.prefs.setString('proofs', jsonEncode(Nip60.shared.proofEvents));
+    widget.prefs.setString('history', jsonEncode(Nip60.shared.histories));
   }
 
   Future<void> _fetchWalletEvent() async {
@@ -474,6 +474,67 @@ class _WalletPage extends State<WalletPage> with CashuListener {
 
   _onSend () async {
     var action = await sendButtomSheet(context);
+    if (action == 'cashu') {
+      // ignore: use_build_context_synchronously
+      context.loaderOverlay.show();
+      String ecash = await Cashu.shared.getLastestEcash();
+      // ignore: use_build_context_synchronously
+      context.loaderOverlay.hide();
+
+      GlobalKey dialogKey = GlobalKey();
+      // ignore: use_build_context_synchronously
+      showDialog(context: context,
+        builder: (context) => ScaffoldMessenger(
+          key: dialogKey,
+          child: Builder(
+            builder: (context) => Scaffold(
+              backgroundColor: Colors.transparent,
+              body: AlertDialog(
+                title: const Text('Ecash'),
+                content: SizedBox(
+                  width: 300.0,
+                  height: 300.0,
+                  child: QrImageView(
+                    data: ecash,
+                    version: QrVersions.auto,
+                    size: 200.0,
+                  ),
+                ),
+                actions: [
+                  Row(
+                    children: [
+                      TextButton(
+                        onPressed: () async {
+                          await Clipboard.setData(ClipboardData(text: ecash));
+                          // ignore: use_build_context_synchronously
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Text("Copy to clipboard!"),
+                              duration: const Duration(seconds: 3),
+                              width: 200, // Width of the SnackBar.
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10.0),
+                              ),
+                            )
+                          );
+                        }, 
+                        child: const Text('Copy', style: TextStyle(fontSize: 16))
+                      ),
+                      const Expanded(child: SizedBox(height: 10,)),
+                      TextButton(
+                        onPressed: () {Navigator.of(context).pop();}, 
+                        child: const Text('Close', style: TextStyle(fontSize: 16))
+                      ),
+                    ]
+                  ),
+                ],
+              )
+            ),
+          ),
+        ),
+      );
+    }
   }
 
   _sendreceive(BuildContext context, {required String title, required Icon icon, required VoidCallback onPreesed}) {

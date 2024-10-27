@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:cashu_dart/business/mint/mint_helper.dart';
 import 'package:cashu_dart/core/DHKE_helper.dart';
@@ -28,10 +27,13 @@ class Cashu {
   final _invoices = <Receipt>[];
   final _pendingInvoices = <Receipt>{};
   final List<CashuListener> _listeners = [];
-  Completer invoiceCreated = Completer();
+  Completer _invoiceCreated = Completer();
   Completer invoicePaid = Completer();
 
   TaskScheduler? invoiceChecker;
+
+  final List<String> _ecashToken = [];
+  Completer _ecashCreated = Completer();
 
   Future<void> initialize() async {
     invoiceChecker = TaskScheduler(task: _periodicCheck)..start();
@@ -64,8 +66,13 @@ class Cashu {
   }
 
   Future<Receipt> getLastestInvoice() async {
-    await invoiceCreated.future;
+    await _invoiceCreated.future;
     return _invoices.last;
+  }
+
+  Future<String> getLastestEcash() async {
+    await _ecashCreated.future;
+    return _ecashToken.last;
   }
 
   Future<void> redeemEcash({
@@ -81,13 +88,77 @@ class Cashu {
         swapProofs: redeemProofs,
       );
       _updateProofs(newProofs!, mint);
-      await Nip60.shared.createTokenEvent(newProofs, mint.mintURL);
+      final evtId = await Nip60.shared.createTokenEvent(newProofs, mint.mintURL);
+      await Nip60.shared.createHistoryEvent([evtId], []);
       notifyListenerForBalanceChanged(mint);
     }
   }
 
   Future<void> sendEcash(IMint mint, int amount) async {
-    print(proofs[mint]!.map((p) => p.amountNum).toList());
+    _ecashCreated = Completer();
+    bool swap = false;
+    final List<Proof> proofsToSend = [];
+    List<int>? proofIdx = _findOneSubsetWithSum(proofs[mint]!.map((p) => p.amountNum).toList(), amount);
+    if (proofIdx != null) {
+      for (var idx in proofIdx) {
+        proofsToSend.add(proofs[mint]![idx]);
+      }
+    } else {
+      for (var proof in proofs[mint]!) {
+        if (proofsToSend.totalAmount >= amount) break;
+        proofsToSend.add(proof);
+      }
+      if (proofsToSend.totalAmount > amount) swap = true;
+    }
+
+    if (swap) {
+      final swapedProof = await swapProofs(
+        mint: mint, 
+        swapProofs: proofsToSend,
+        supportAmount: amount,
+      );
+      final swapedToSend = <Proof>[];
+      final change = <Proof>[];  
+      for (final proof in swapedProof!) {
+        if (swapedToSend.totalAmount < amount) {
+          swapedToSend.add(proof);
+        } else {
+          change.add(proof);
+        }
+      }
+      _updateProofs(change, mint);
+      
+      final ecash = Nut0.encodedToken(
+        Token(
+          entries: [TokenEntry(mint: mint.mintURL, proofs: swapedToSend)],
+          unit: "sat",
+        ),
+      );
+      _ecashToken.add(ecash);
+      _ecashCreated.complete();
+      
+      final evtId = await Nip60.shared.createTokenEvent(change, mint.mintURL);
+
+      await Nip60.shared.rollOverTokenEvent(proofsToSend, mint.mintURL, [evtId]);
+      for (final proof in proofsToSend) {
+        proofs[mint]!.remove(proof);
+      }
+    } else {
+      final ecash = Nut0.encodedToken(
+        Token(
+          entries: [TokenEntry(mint: mint.mintURL, proofs: proofsToSend)],
+          unit: "sat",
+        ),
+      );
+      _ecashToken.add(ecash);
+      _ecashCreated.complete();
+
+      await Nip60.shared.rollOverTokenEvent(proofsToSend, mint.mintURL, []);
+      for (final proof in proofsToSend) {
+        proofs[mint]!.remove(proof);
+      }
+    }
+    notifyListenerForBalanceChanged(mint);
   }
 
   Future<List<Proof>?> swapProofs({
@@ -158,7 +229,7 @@ class Cashu {
     required int amount,
     required BuildContext context,
   }) async {
-    invoiceCreated = Completer();
+    _invoiceCreated = Completer();
     final response = await mint.createQuoteAction(
       mintURL: mint.mintURL,
       amount: amount,
@@ -167,7 +238,7 @@ class Cashu {
     invoicePaid = Completer();
     _invoices.add(response.data);
     checkInvoice(response.data);
-    invoiceCreated.complete();
+    _invoiceCreated.complete();
     return response.data;
   }
 
@@ -203,7 +274,8 @@ class Cashu {
         invoicePaid.complete();
         final newProofs = constructProofs(mint, response.data, secrets, rs);
         _updateProofs(newProofs, mint);
-        await Nip60.shared.createTokenEvent(newProofs, mint.mintURL);
+        final evtId = await Nip60.shared.createTokenEvent(newProofs, mint.mintURL);
+        await Nip60.shared.createHistoryEvent([evtId], []);
         notifyListenerForPaidSuccess(invoice);
       }
       _invoices.remove(invoice);

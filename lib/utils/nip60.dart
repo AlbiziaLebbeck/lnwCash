@@ -158,7 +158,7 @@ class Nip60 {
     RelayPool.shared.send(event!.serialize());
   }
 
-  Future<void> createTokenEvent(List<Proof> proofs, String mintUrl) async {
+  Future<String> createTokenEvent(List<Proof> proofs, String mintUrl) async {
     Map<String,dynamic> content = {
       'mint': mintUrl,
       'proofs': <Map<String,dynamic>>[],
@@ -185,7 +185,38 @@ class Nip60 {
     proofEvents[event!.id] = jsonDecode(event.serialize())[1];
     eventProofs[event.id] = proofs;
     RelayPool.shared.send(event.serialize());
-    await createHistoryEvent([event.id], []);
+    return event.id;
+  }
+
+  Future<void> deleteTokenEvent(List<String> events) async {
+    List<List<String>> tags = [["k","7375"]];
+    for (var evt in events) {
+      tags.add(["e", evt]);
+      proofEvents.remove(evt);
+      eventProofs.remove(evt);
+    }
+    Event? event = await createEvent(
+      kind: 5, 
+      tags: tags, 
+      content: "roll over token event",
+    ); 
+    RelayPool.shared.send(event!.serialize());
+  }
+
+  Future<void> rollOverTokenEvent(List<Proof> proofs, String mintUrl, List<String> evtIds) async {
+    List<String> rolloverEvent = [];
+    List<Proof> unspendProof = [];
+    eventProofs.forEach((evt,prfs) {
+      final spendProofs = prfs.where((p) => proofs.contains(p)).toList();
+      if (spendProofs.isNotEmpty) {
+        rolloverEvent.add(evt);
+        unspendProof.addAll(prfs.where((p) => !spendProofs.contains(p)));
+      }
+    });
+
+    if (unspendProof.isNotEmpty) evtIds.add(await createTokenEvent(unspendProof, mintUrl));
+    await createHistoryEvent(evtIds, rolloverEvent);
+    await deleteTokenEvent(rolloverEvent);
   }
 
   Subscription fetchProofEvent() {
@@ -282,6 +313,8 @@ class Nip60 {
         String aTag = event['tags'].where((e) => e[0] == 'a').toList()[0][1];
         if(aTag.split(':').length < 3) return;
         if(aTag.split(':')[2] != Nip60.shared.wallet['id']) return;
+
+        print(event['id']);
 
         if (histories.where((e) => e['id'] == event['id']).isEmpty) {
           dynamic decryptMsg = jsonDecode((await Signer.shared.nip44Decrypt(event['content']))!);
