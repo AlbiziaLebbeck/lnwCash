@@ -321,7 +321,8 @@ class _SendButtomSheet extends State<SendButtomSheet> {
                       return "Amount should greater than 0"; 
                     }
                     
-                    // IMint mint = Cashu.shared.getMint(currentMint);
+                    IMint mint = Cashu.shared.getMint(currentMint);
+                    Cashu.shared.sendEcash(mint, amount);
                     // Cashu.shared.createLightningInvoice(mint: mint, amount: amount, context: context);
                     return null;
                   },

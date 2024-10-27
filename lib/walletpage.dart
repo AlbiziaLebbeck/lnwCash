@@ -94,6 +94,7 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     await _fetchWalletEvent();
     await _mintSetup();
     await _fetchProofEvent();
+    _fetchHistoryEvent();
     
     widget.prefs.setString('wallet', jsonEncode(Nip60.shared.wallet));
     Nip60.shared.updateWallet();
@@ -199,10 +200,10 @@ class _WalletPage extends State<WalletPage> with CashuListener {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text("Transaction History", style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600),),
-                    TextButton(
-                      onPressed: () => {}, 
-                      child: const Text("view all"),
-                    )
+                    // TextButton(
+                    //   onPressed: () => {}, 
+                    //   child: const Text("view all"),
+                    // )
                   ],
                 ),
               ),
@@ -250,8 +251,6 @@ class _WalletPage extends State<WalletPage> with CashuListener {
 
   @override
   void handleInvoicePaid(Receipt receipt) {
-    
-    widget.prefs.setString('proofs', Cashu.shared.proofSerializer());
     setState(() {
       balance = 0;
       for (IMint mint in Cashu.shared.mints) {
@@ -260,9 +259,12 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     });
 
     Nip60.shared.wallet['balance'] = balance.toString();
-    widget.prefs.setString('wallet', jsonEncode(Nip60.shared.wallet));
     Nip60.shared.updateWallet();
-  
+
+    widget.prefs.setString('wallet', jsonEncode(Nip60.shared.wallet));
+    widget.prefs.setString('proofs', jsonEncode(Nip60.shared.proofEvents));
+    widget.prefs.setString('history', jsonEncode(Nip60.shared.histories));
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         backgroundColor: Colors.green,
@@ -281,8 +283,6 @@ class _WalletPage extends State<WalletPage> with CashuListener {
 
   @override
   void handleBalanceChanged(IMint mint) {
-    widget.prefs.setString('proofs', Cashu.shared.proofSerializer());
-    
     num oldBalance = balance;
 
     setState(() {
@@ -293,8 +293,11 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     });
 
     Nip60.shared.wallet['balance'] = balance.toString();
-    widget.prefs.setString('wallet', jsonEncode(Nip60.shared.wallet));
     Nip60.shared.updateWallet();
+
+    widget.prefs.setString('wallet', jsonEncode(Nip60.shared.wallet));
+    widget.prefs.setString('proofs', jsonEncode(Nip60.shared.proofEvents));
+    widget.prefs.setString('history', jsonEncode(Nip60.shared.histories));
 
     String snackText = balance > oldBalance ? 
       "Receive ${balance - oldBalance} sat via ecash" :
@@ -353,17 +356,26 @@ class _WalletPage extends State<WalletPage> with CashuListener {
   }
 
   Future<void> _fetchProofEvent() async { 
-    String proofsStr = widget.prefs.getString('proofs') ?? '';
-    if (proofsStr != '') {
-      await Cashu.shared.proofDeserializer(proofsStr);
-    }
-
     Subscription subscription = Nip60.shared.fetchProofEvent();
     if (mounted) context.loaderOverlay.show();
     await subscription.timeout.future;
     RelayPool.shared.unsubscribe(subscription.id);
     if (mounted) context.loaderOverlay.hide();
-    widget.prefs.setString('proofs', Cashu.shared.proofSerializer());
+    
+    String proofEvts = widget.prefs.getString('proofs') ?? '';
+    if (proofEvts != '') {
+      for (var id in jsonDecode(proofEvts).keys) {
+        final evt = jsonDecode(proofEvts)[id];
+        if(!Nip60.shared.proofEvents.containsKey(id)) { //resend event again
+          RelayPool.shared.send('["EVENT",${jsonEncode(evt)}]');
+        }
+        Nip60.shared.proofEvents[id] = evt;
+      }
+    }
+    
+    widget.prefs.setString('proofs', jsonEncode(Nip60.shared.proofEvents));
+    await Nip60.shared.eventToProof();
+
     setState(() {
       balance = 0;
       for (IMint mint in Cashu.shared.mints) {
@@ -371,6 +383,22 @@ class _WalletPage extends State<WalletPage> with CashuListener {
       }
       Nip60.shared.wallet['balance'] = balance.toString();
     });
+  }
+
+  Future<void> _fetchHistoryEvent() async {
+    String history = widget.prefs.getString('history') ?? '';
+    if (history != '') { 
+      for (var hist in jsonDecode(history)) {
+        Nip60.shared.histories.add(Map.castFrom(hist));
+      }
+    }
+    setState(() {});
+
+    Subscription subscription = Nip60.shared.fetchHistoryEvent();
+    await subscription.timeout.future;
+    RelayPool.shared.unsubscribe(subscription.id);
+    widget.prefs.setString('history', jsonEncode(Nip60.shared.histories));
+    setState(() {});
   }
 
   _onReceive () async {

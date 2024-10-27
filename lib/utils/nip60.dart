@@ -13,8 +13,13 @@ class Nip60 {
   static final Nip60 shared = Nip60._internal();
   Nip60._internal();
 
-  List<Map<String,String>> wallets = [];
+  final List<Map<String,String>> wallets = [];
   Map<String,String> wallet = {};
+
+  final Map<String,dynamic> proofEvents = {};
+  final Map<String,List<Proof>> eventProofs = {}; 
+
+  final List<Map<String,String>> histories = [];
 
   createWallet(String name) async {
     String privkey = generate64RandomHexChars();
@@ -159,9 +164,9 @@ class Nip60 {
       'proofs': <Map<String,dynamic>>[],
     };
 
-    content['proofs'] = proofs.map((p) =>{
+    content['proofs'] = proofs.map((p) => {
       'id': p.id,
-      'amount': int.parse(p.amount),
+      'amount': p.amountNum,
       'secret': p.secret,
       'C': p.C,
     }.cast<String,dynamic>()).toList();
@@ -176,8 +181,11 @@ class Nip60 {
       tags: tags, 
       content: encryptedContent!,
     );
-
-    RelayPool.shared.send(event!.serialize());
+    
+    proofEvents[event!.id] = jsonDecode(event.serialize())[1];
+    eventProofs[event.id] = proofs;
+    RelayPool.shared.send(event.serialize());
+    await createHistoryEvent([event.id], []);
   }
 
   Subscription fetchProofEvent() {
@@ -188,23 +196,102 @@ class Nip60 {
       )], 
       onEvent: (event) async {
         if (event['tags'].where((e) => e[0] == 'a').toList().isEmpty) return;
+        
         String aTag = event['tags'].where((e) => e[0] == 'a').toList()[0][1];
+        if(aTag.split(':').length < 3) return;
+        if(aTag.split(':')[2] != Nip60.shared.wallet['id']) return;
 
-        if (aTag.split(':').length < 3) return;
-        if (aTag.split(':')[2] != Nip60.shared.wallet['id']) return;
+        proofEvents[event['id']] = event;
+      }
+    );
+    
+    RelayPool.shared.subscribe(subscription, timeout: 3);
+    return subscription;
+  }
+
+  Future<void> eventToProof() async {
+    for(var id in Nip60.shared.proofEvents.keys) {
+      final event = Nip60.shared.proofEvents[id];
+      dynamic decryptMsg = jsonDecode((await Signer.shared.nip44Decrypt(event['content']))!);
+      IMint mint = Cashu.shared.getMint(decryptMsg['mint']);
+      eventProofs[id] = [];
+      for (var proof in decryptMsg['proofs']){
+        if (Cashu.shared.proofs[mint]!.where((prf) => prf.secret == proof['secret']).isEmpty) {
+          final prf = Proof(
+            id: proof['id'], 
+            amount: proof['amount'].toString(), 
+            secret: proof['secret'], 
+            C: proof['C'],
+          );
+          eventProofs[id]!.add(prf);
+          Cashu.shared.proofs[mint]!.add(prf);
+        } 
+      }
+    }
+  }
+
+  Future<void> createHistoryEvent(List<String> createdEvt, List<String> destroyedEvt) async {
+    List<List<String>> content = [];
+    int amount = 0;
+    for (var evt in createdEvt) {
+      content.add(["e", evt, RelayPool.shared.getRelayURL().first, "created"]);
+      amount += eventProofs[evt]!.totalAmount;
+    }
+    for (var evt in destroyedEvt) {
+      content.add(["e", evt, RelayPool.shared.getRelayURL().first, "destroyed"]);
+      amount -= eventProofs[evt]!.totalAmount;
+    }
+    if (amount > 0) {
+      content.add(["direction", "in"]);
+      content.add(["amount", "$amount", "sat"]);
+    }
+    else {
+      content.add(["direction", "out"]);
+      content.add(["amount", "${-amount}", "sat"]);
+    }
+
+    String? encryptedContent = await Signer.shared.nip44Encrypt(jsonEncode(content));
+
+    List<List<String>> tags = [];
+    tags.add(['a', '37375:${Signer.shared.pub}:${wallet['id']}']);
+
+    Event? event = await createEvent(
+      kind: 7376, 
+      tags: tags, 
+      content: encryptedContent!,
+    );
+    
+    RelayPool.shared.send(event!.serialize());
+    histories.insert(0, {
+      "id": event.id,
+      "amount": amount.abs().toString(),
+      "direction": amount > 0 ? "in" : "out",
+      "time": event.createdAt.toString(),
+    });
+  }
+
+  Subscription fetchHistoryEvent() {
+    Subscription subscription = Subscription( 
+      filters: [Filter(
+        kinds: [7376],
+        authors: [Signer.shared.pub!],
+      )], 
+      onEvent: (event) async {
+        if (event['tags'].where((e) => e[0] == 'a').toList().isEmpty) return;
+        
+        String aTag = event['tags'].where((e) => e[0] == 'a').toList()[0][1];
+        if(aTag.split(':').length < 3) return;
+        if(aTag.split(':')[2] != Nip60.shared.wallet['id']) return;
+
+        if (histories.where((e) => e['id'] == event['id']).isEmpty) {
+          dynamic decryptMsg = jsonDecode((await Signer.shared.nip44Decrypt(event['content']))!);
           
-        dynamic decryptMsg = jsonDecode((await Signer.shared.nip44Decrypt(event['content']))!);
-        IMint mint = Cashu.shared.getMint(decryptMsg['mint']);
-        for (var proof in decryptMsg['proofs']){
-          if (Cashu.shared.proofs[mint]!.where((prf) => prf.secret == proof['secret']).isEmpty) {
-            Cashu.shared.proofs[mint]!.add(
-              Proof(
-                id: proof['id'], 
-                amount: proof['amount'].toString(), 
-                secret: proof['secret'], 
-                C: proof['C']),
-            );
-          } 
+          histories.add({
+            "id": event['id'],
+            "amount": decryptMsg.where((c) => c[0] == 'amount').first[1].toString(),
+            "direction": decryptMsg.where((c) => c[0] == 'direction').first[1].toString(),
+            "time": event['created_at'].toString(),
+          });
         }
       }
     );

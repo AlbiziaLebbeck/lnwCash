@@ -81,9 +81,13 @@ class Cashu {
         swapProofs: redeemProofs,
       );
       _updateProofs(newProofs!, mint);
-      Nip60.shared.createTokenEvent(newProofs, mint.mintURL);
+      await Nip60.shared.createTokenEvent(newProofs, mint.mintURL);
       notifyListenerForBalanceChanged(mint);
     }
+  }
+
+  Future<void> sendEcash(IMint mint, int amount) async {
+    print(proofs[mint]!.map((p) => p.amountNum).toList());
   }
 
   Future<List<Proof>?> swapProofs({
@@ -126,6 +130,26 @@ class Cashu {
       return constructProofs(mint, response.data, secrets, rs);
     }
 
+    return null;
+  }
+
+  List<int>? _findOneSubsetWithSum(List<int> nums, int target) {
+    List<List<int>?> dp = List.filled(target + 1, null);
+    dp[0] = [];
+
+    for (int i = 0; i < nums.length; i++) {
+      int num = nums[i];
+
+      for (int t = target; t >= num; t--) {
+        if (dp[t - num] != null) {
+          dp[t] = List.from(dp[t - num]!)..add(i);
+
+          if (t == target) {
+            return dp[target];
+          }
+        }
+      }
+    }
     return null;
   }
 
@@ -179,7 +203,7 @@ class Cashu {
         invoicePaid.complete();
         final newProofs = constructProofs(mint, response.data, secrets, rs);
         _updateProofs(newProofs, mint);
-        Nip60.shared.createTokenEvent(newProofs, mint.mintURL);
+        await Nip60.shared.createTokenEvent(newProofs, mint.mintURL);
         notifyListenerForPaidSuccess(invoice);
       }
       _invoices.remove(invoice);
@@ -237,49 +261,48 @@ class Cashu {
     }
   }
 
-  String proofSerializer() {
-    Map<String,List<Map<String,dynamic>>> proofsToJson = {};
-    proofs.forEach((mint, prfs) {
-      List<Map<String,dynamic>> prfsToJson = [];
-      for (var prf in prfs) {
-        Map<String,dynamic> strPrf = {
-          'id': prf.id,
-          'amount': prf.amount,
-          'secret': prf.secret,
-          'C': prf.C,
-        };
-        // if(prf.dleq != null && prf.dleq!.isNotEmpty) {
-        //   prfToJson = '{\"id":\"${prf.id}\",\"amount\":\"${prf.amount},\"secret\":\"${prf.secret}\",\"C\",\"${prf.C}\",\"dleq":{"e":"${prf.dleq!['e']}","s":"${prf.dleq!['s']}","r":"${prf.dleq!['r']}"}}';
-        // }
-        prfsToJson.add(strPrf);
-      }
-      proofsToJson[mint.mintURL] =  prfsToJson;
-    });
-    return jsonEncode(proofsToJson);
-  }
+  // String proofSerializer() {
+  //   Map<String,List<Map<String,dynamic>>> proofsToJson = {};
+  //   proofs.forEach((mint, prfs) {
+  //     List<Map<String,dynamic>> prfsToJson = [];
+  //     for (var prf in prfs) {
+  //       Map<String,dynamic> strPrf = {
+  //         'id': prf.id,
+  //         'amount': prf.amount,
+  //         'secret': prf.secret,
+  //         'C': prf.C,
+  //       };
+  //       // if(prf.dleq != null && prf.dleq!.isNotEmpty) {
+  //       //   prfToJson = '{\"id":\"${prf.id}\",\"amount\":\"${prf.amount},\"secret\":\"${prf.secret}\",\"C\",\"${prf.C}\",\"dleq":{"e":"${prf.dleq!['e']}","s":"${prf.dleq!['s']}","r":"${prf.dleq!['r']}"}}';
+  //       // }
+  //       prfsToJson.add(strPrf);
+  //     }
+  //     proofsToJson[mint.mintURL] =  prfsToJson;
+  //   });
+  //   return jsonEncode(proofsToJson);
+  // }
 
-  Future<void> proofDeserializer (String jsonProofs) async {
-    Map<String,dynamic> getProofs = Map.castFrom(jsonDecode(jsonProofs));
-    List<String> mintStr = mints.map((m) => m.mintURL).toList(); 
-     for (var mintUrl in getProofs.keys) {
-      if (!mintStr.contains(mintUrl)) {
-        bool ok = await addMint(mintUrl);
-        if (!ok) continue;
-      }
+  // Future<void> proofDeserializer (String jsonProofs) async {
+  //   Map<String,dynamic> getProofs = Map.castFrom(jsonDecode(jsonProofs));
+  //   List<String> mintStr = mints.map((m) => m.mintURL).toList(); 
+  //    for (var mintUrl in getProofs.keys) {
+  //     if (!mintStr.contains(mintUrl)) {
+  //       bool ok = await addMint(mintUrl);
+  //       if (!ok) continue;
+  //     }
 
-      IMint mint = getMint(mintUrl);
+  //     IMint mint = getMint(mintUrl);
 
-      for (var prf in getProofs[mintUrl]!) {
-        proofs[mint]!.add(Proof(
-          id: prf['id']!, 
-          amount: prf['amount']!, 
-          secret: prf['secret']!, 
-          C: prf['C']!,
-        ));
-      }
-     }
-  }
-
+  //     for (var prf in getProofs[mintUrl]!) {
+  //       proofs[mint]!.add(Proof(
+  //         id: prf['id']!, 
+  //         amount: prf['amount']!, 
+  //         secret: prf['secret']!, 
+  //         C: prf['C']!,
+  //       ));
+  //     }
+  //    }
+  // }
 
   static String ecPointToHex(ECPoint point, [bool compressed = true]) {
     return point.getEncoded(compressed).map(

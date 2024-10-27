@@ -1,45 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
+import 'package:lnwcash/utils/nip60.dart';
+import 'package:nostr_core_dart/nostr.dart';
 
-
-List transactionHist = [
-  // {
-  //   'type': 'send',
-  //   'method': 'Cashu',
-  //   'amount': '42',
-  //   'date': '1 hr'
-  // },
-  // {
-  //   'type': 'send',
-  //   'method': 'Lightning',
-  //   'amount' : '42',
-  //   'date': '4 hr'
-  // },
-  // {
-  //   'type': 'receive',
-  //   'method': 'Cashu',
-  //   'amount' : '3,345',
-  //   'date': '1 day'
-  // },
-  // {
-  //   "type": "receive",
-  //   "method": "Lightning",
-  //   "amount" : "1,000,000",
-  //   'date': '1 day'
-  // },
-  // {
-  //   "type": "receive",
-  //   "method": "Lightning",
-  //   "amount" : "1,000,000",
-  //   'date': '1 day'
-  // },
-  // {
-  //   "type": "receive",
-  //   "method": "Lightning",
-  //   "amount" : "1,000,000",
-  //   'date': '1 day'
-  // }
-];
 
 getTransactionHistory(context){
   return Container(
@@ -47,8 +10,8 @@ getTransactionHistory(context){
     padding: const EdgeInsets.only(left: 15, right: 15),
     child: ListView(
       scrollDirection: Axis.vertical,
-      children: List.generate(transactionHist.length, 
-        (index) => FadeInUp(child: TransactionView(transactionData: transactionHist[index]))
+      children: List.generate(Nip60.shared.histories.length, 
+        (index) => FadeInUp(child: TransactionView(transactionData: Nip60.shared.histories[index]))
       )
     // ),
     ),
@@ -58,10 +21,23 @@ getTransactionHistory(context){
 class TransactionView extends StatelessWidget {
   const TransactionView({super.key, required this.transactionData});
 
-  final Map transactionData;
+  final Map<String,String> transactionData;
 
   @override
   Widget build(BuildContext context) {
+
+    String timediffStr = "";
+    int timediff = currentUnixTimestampSeconds() - int.parse(transactionData['time']!);
+    if (timediff < 60) {
+      timediffStr = "< 1 minute";
+    } else if (timediff < 3600) {
+      timediffStr = "${timediff~/60} minute${timediff~/60 > 1 ?"s":""}";
+    } else if (timediff < 3600*24) {
+      timediffStr = "${timediff~/3600} hour${timediff~/3600 > 1 ?"s":""}";
+    } else {
+      timediffStr = "${timediff~/(3600*24)} day${timediff~/(3600*24) > 1 ?"s":""}";
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8, right: 2),
       padding: const EdgeInsets.only(top: 16, bottom: 16, left: 32, right: 32),
@@ -79,11 +55,11 @@ class TransactionView extends StatelessWidget {
       ),
       child: Row(
         children: [
-          transactionData['type']== 'send' ? const Icon(Icons.call_made, color: Colors.red,) : const Icon(Icons.call_received, color: Colors.green),
+          transactionData['direction'] == 'out' ? const Icon(Icons.call_made, color: Colors.red,) : const Icon(Icons.call_received, color: Colors.green),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              '${(transactionData['type']== 'send' ? '-':'') + transactionData['amount']} sats', 
+              '${(transactionData['type'] == 'out' ? '-':'')}${transactionData['amount']!} sats', 
                 style: TextStyle(
                 fontSize: 16, 
                 fontWeight: FontWeight.w500,
@@ -91,7 +67,7 @@ class TransactionView extends StatelessWidget {
               ),
             )
           ),
-          Text(transactionData['date'], 
+          Text(timediffStr, 
             style: TextStyle(
               fontSize: 16, 
               fontWeight: FontWeight.w500,
