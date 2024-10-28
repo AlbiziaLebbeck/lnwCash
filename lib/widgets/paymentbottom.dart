@@ -1,4 +1,5 @@
 import 'package:cashu_dart/business/proof/token_helper.dart';
+import 'package:cashu_dart/core/nuts/nut_00.dart';
 import 'package:cashu_dart/model/mint_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -322,6 +323,10 @@ class _SendButtomSheet extends State<SendButtomSheet> {
                     }
                     
                     IMint mint = Cashu.shared.getMint(currentMint);
+                    if (amount > Cashu.shared.proofs[mint]!.totalAmount) {
+                      return "Mint balance is insufficient";
+                    }  
+                    
                     Cashu.shared.sendEcash(mint, amount);
                     return null;
                   },
@@ -340,7 +345,7 @@ class _SendButtomSheet extends State<SendButtomSheet> {
                     Cashu.shared.mints.length,
                     (idx) => DropdownMenuItem(
                       value: Cashu.shared.mints[idx].mintURL, 
-                      child: Text(Cashu.shared.mints[idx].mintURL),
+                      child: Text('${Cashu.shared.mints[idx].mintURL} (${Cashu.shared.proofs[Cashu.shared.mints[idx]]!.totalAmount} sats)'),
                     ),
                   ),
                   onChanged: (value) {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:lnwcash/utils/cashu.dart';
 
 Future<void> mintManager(context) async {
@@ -18,6 +19,8 @@ class _MintManager extends State<MintManager>{
   
   final _mintKey = GlobalKey<FormState>();
   String? addingMint;
+
+  final TextEditingController _mintController = TextEditingController();
   
   @override
   void initState() {
@@ -52,7 +55,8 @@ class _MintManager extends State<MintManager>{
             child: Column(
               children: [
                 TextFormField(
-                  initialValue: "https://",
+                  controller: _mintController,
+                  // initialValue: "https://",
                   decoration: InputDecoration(
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(25),
@@ -62,6 +66,18 @@ class _MintManager extends State<MintManager>{
                       borderRadius: BorderRadius.circular(25)
                     ),
                     labelText: 'Add new mint',
+                    suffixIcon: Padding(
+                      padding: const EdgeInsetsDirectional.only(end: 5),
+                      child: IconButton(
+                        onPressed: () async {
+                          final mintUrl = await Clipboard.getData('text/plain');
+                          if (mintUrl != null) {
+                            _mintController.text = mintUrl.text ?? '';
+                          }
+                        },
+                        icon: const Icon(Icons.paste),
+                      ),
+                    ),
                   ),
                   validator: (value) { 
                     if (value == null || value.isEmpty || value == 'https://') {

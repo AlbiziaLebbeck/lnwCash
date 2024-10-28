@@ -235,6 +235,11 @@ class Cashu {
       amount: amount,
     );
     if (!response.isSuccess) return null;
+
+    if (_invoices.isEmpty) {
+      startHighFrequencyDetection();
+    }
+
     invoicePaid = Completer();
     _invoices.add(response.data);
     checkInvoice(response.data);
@@ -288,6 +293,18 @@ class Cashu {
     }
 
     _pendingInvoices.remove(invoice);
+
+    if (_invoices.isEmpty) {
+      stopHighFrequencyDetection();
+    }
+  }
+
+  void startHighFrequencyDetection() {
+    invoiceChecker?.enableFixedInterval(const Duration(seconds: 5));
+  }
+
+  void stopHighFrequencyDetection() {
+    invoiceChecker?.disableFixedInterval();
   }
 
   List<Proof> constructProofs(
