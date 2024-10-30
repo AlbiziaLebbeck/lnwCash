@@ -280,6 +280,7 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     widget.prefs.setString('history', jsonEncode(Nip60.shared.histories));
 
     await popUp.future;
+    // ignore: use_build_context_synchronously
     _callTransactionSnackBar(context, "ecash", (balance - oldBalance).toInt());
   }
 
@@ -382,42 +383,7 @@ class _WalletPage extends State<WalletPage> with CashuListener {
       showDialog(context: context,
         builder: (context) => ScaffoldMessenger(
           key: dialogKey,
-          child: Builder(
-            builder: (context) => Scaffold(
-              backgroundColor: Colors.transparent,
-              body: AlertDialog(
-                title: const Text('Lightning invoice'),
-                content: SizedBox(
-                  width: 300.0,
-                  height: 300.0,
-                  child: QrImageView(
-                    data: 'lightning:${receipt.request}',
-                    version: QrVersions.auto,
-                    size: 200.0,
-                  ),
-                ),
-                actions: [
-                  Row(
-                    children: [
-                      TextButton(
-                        onPressed: () async {
-                          Clipboard.setData(ClipboardData(text: receipt.request));
-                          // ignore: use_build_context_synchronously
-                          _callSnackBar(context, "Copy to clipboard!");
-                        }, 
-                        child: const Text('Copy', style: TextStyle(fontSize: 16))
-                      ),
-                      const Expanded(child: SizedBox(height: 10,)),
-                      TextButton(
-                        onPressed: () {Navigator.of(context).pop();}, 
-                        child: const Text('Close', style: TextStyle(fontSize: 16))
-                      ),
-                    ]
-                  ),
-                ],
-              )
-            ),
-          ),
+          child: _qrDialog('Lightning invoice', 'lightning:${receipt.request}'),
         ),
       ).then((value) {popUp.complete();});
 
@@ -440,47 +406,10 @@ class _WalletPage extends State<WalletPage> with CashuListener {
       // ignore: use_build_context_synchronously
       context.loaderOverlay.hide();
 
-      GlobalKey dialogKey = GlobalKey();
       // ignore: use_build_context_synchronously
       showDialog(context: context,
         builder: (context) => ScaffoldMessenger(
-          key: dialogKey,
-          child: Builder(
-            builder: (context) => Scaffold(
-              backgroundColor: Colors.transparent,
-              body: AlertDialog(
-                title: const Text('Ecash'),
-                content: SizedBox(
-                  width: 300.0,
-                  height: 300.0,
-                  child: QrImageView(
-                    data: ecash,
-                    version: QrVersions.auto,
-                    size: 200.0,
-                  ),
-                ),
-                actions: [
-                  Row(
-                    children: [
-                      TextButton(
-                        onPressed: () async {
-                          await Clipboard.setData(ClipboardData(text: ecash));
-                          // ignore: use_build_context_synchronously
-                          _callSnackBar(context, "Copy to clipboard!");
-                        }, 
-                        child: const Text('Copy', style: TextStyle(fontSize: 16))
-                      ),
-                      const Expanded(child: SizedBox(height: 10,)),
-                      TextButton(
-                        onPressed: () {Navigator.of(context).pop();}, 
-                        child: const Text('Close', style: TextStyle(fontSize: 16))
-                      ),
-                    ]
-                  ),
-                ],
-              )
-            ),
-          ),
+          child: _qrDialog("Ecash token", ecash), 
         ),
       ).then((value) {popUp.complete();});
     } else {
@@ -532,12 +461,51 @@ class _WalletPage extends State<WalletPage> with CashuListener {
           style: const TextStyle(color: Colors.white),
         ),
         duration: const Duration(seconds: 3),
-        width: 200, // Width of the SnackBar.
+        width: 220, // Width of the SnackBar.
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10.0),
         ),
       )
+    );
+  }
+
+  Builder _qrDialog(String title, String data) {
+    return Builder(
+      builder: (context) => Scaffold(
+        backgroundColor: Colors.transparent,
+        body: AlertDialog(
+          title: Text(title),
+          content: SizedBox(
+            width: 300.0,
+            height: 300.0,
+            child: QrImageView(
+              data: data,
+              version: QrVersions.auto,
+              size: 200.0,
+            ),
+          ),
+          actions: [
+            Row(
+              children: [
+                TextButton(
+                  onPressed: () async {
+                    await Clipboard.setData(ClipboardData(text: data));
+                    // ignore: use_build_context_synchronously
+                    _callSnackBar(context, "Copy to clipboard!");
+                  }, 
+                  child: const Text('Copy', style: TextStyle(fontSize: 16))
+                ),
+                const Expanded(child: SizedBox(height: 10,)),
+                TextButton(
+                  onPressed: () {Navigator.of(context).pop();}, 
+                  child: const Text('Close', style: TextStyle(fontSize: 16))
+                ),
+              ]
+            ),
+          ],
+        )
+      ),
     );
   }
 }

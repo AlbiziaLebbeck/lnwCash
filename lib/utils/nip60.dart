@@ -198,7 +198,7 @@ class Nip60 {
     Event? event = await createEvent(
       kind: 5, 
       tags: tags, 
-      content: "roll over token event",
+      content: "Spent token!!",
     ); 
     RelayPool.shared.send(event!.serialize());
   }
@@ -301,6 +301,19 @@ class Nip60 {
     });
   }
 
+  Future<void> deleteHistEvent(List<String> events) async {
+    List<List<String>> tags = [["k","7376"]];
+    for (var evt in events) {
+      tags.add(["e", evt]);
+    }
+    Event? event = await createEvent(
+      kind: 5, 
+      tags: tags, 
+      content: "Clear hist",
+    ); 
+    RelayPool.shared.send(event!.serialize());
+  }
+
   Subscription fetchHistoryEvent() {
     Subscription subscription = Subscription( 
       filters: [Filter(
@@ -313,8 +326,6 @@ class Nip60 {
         String aTag = event['tags'].where((e) => e[0] == 'a').toList()[0][1];
         if(aTag.split(':').length < 3) return;
         if(aTag.split(':')[2] != Nip60.shared.wallet['id']) return;
-
-        print(event['id']);
 
         if (histories.where((e) => e['id'] == event['id']).isEmpty) {
           dynamic decryptMsg = jsonDecode((await Signer.shared.nip44Decrypt(event['content']))!);
