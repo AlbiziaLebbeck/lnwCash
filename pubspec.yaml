@@ -46,6 +46,8 @@ dependencies:
   js: ^0.6.7
   loader_overlay: ^4.0.1
   qr_flutter: ^4.1.0
+  bolt11_decoder: ^1.0.2
+  decimal: ^2.3.3
 
 
 dev_dependencies:

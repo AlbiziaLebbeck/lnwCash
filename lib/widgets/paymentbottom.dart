@@ -1,3 +1,7 @@
+import 'dart:math';
+
+import 'package:decimal/decimal.dart';
+
 import 'package:cashu_dart/business/proof/token_helper.dart';
 import 'package:cashu_dart/core/nuts/nut_00.dart';
 import 'package:cashu_dart/model/mint_model.dart';
@@ -392,9 +396,9 @@ class _SendButtomSheet extends State<SendButtomSheet> {
                       padding: const EdgeInsetsDirectional.only(top: 70, end: 5),
                       child: IconButton(
                         onPressed: () async {
-                          final ecash = await Clipboard.getData('text/plain');
-                          if (ecash != null) {
-                            _lightningController.text = ecash.text ?? '';
+                          final invoice = await Clipboard.getData('text/plain');
+                          if (invoice != null) {
+                            _lightningController.text = invoice.text ?? '';
                           }
                         },
                         icon: const Icon(Icons.paste),
@@ -403,12 +407,19 @@ class _SendButtomSheet extends State<SendButtomSheet> {
                   ),
                   validator: (value) {
                     if (value!.isEmpty) return 'Lightning invoice is empty';
-                    // final token = TokenHelper.getDecodedToken(value);
-                    // if (token == null) return 'Invalid token';
-
-                    // Cashu.shared.redeemEcash(token: token);
-
-                    // return null;
+                    final req = Cashu.tryConstructRequestFromPr(value);
+                    if (req == null) return 'Lightning invoice is incorrect';
+                    final amount = (req.amount * Decimal.fromInt(100000000)).toBigInt();
+                    List<IMint> availableMint = [];
+                    for (final mint in Cashu.shared.mints) {
+                      if (BigInt.from(Cashu.shared.proofs[mint]!.totalAmount) >= amount) {
+                        availableMint.add(mint);
+                        break;
+                      }
+                    }
+                    if (availableMint.isEmpty) return "Mint balance is insufficient";
+                    Cashu.shared.payingLightningInvoice(req);
+                    return null;
                   }
                 ),
                 const SizedBox(height: 25,),

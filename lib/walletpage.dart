@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -43,22 +44,14 @@ class _WalletPage extends State<WalletPage> with CashuListener {
   late final String priv;
   late final String login;
 
+  Completer popUp = Completer();
+
   num balance = 0;
   
   // List<Map<String,String>> wallets = [];
   // Map<String,String> wallet = {'balance': '0','mints': '[]'};
   
   List<Map<String,dynamic>> proofs = [];
-
-  SnackBar clipboardSnackBar = SnackBar(
-    content: const Text('Copy Invoice to Clipboard'),
-    duration: const Duration(milliseconds: 3000),
-    width: 200, // Width of the SnackBar.
-    behavior: SnackBarBehavior.floating,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(10.0),
-    ),
-  );
 
   @override
   void initState() {
@@ -261,28 +254,15 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     Nip60.shared.wallet['balance'] = balance.toString();
     Nip60.shared.updateWallet();
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: Colors.green,
-        content: Text("Receive ${receipt.amount} sat via lightning!", 
-          style: const TextStyle(color: Colors.white),
-        ),
-        duration: const Duration(seconds: 3),
-        width: 220, // Width of the SnackBar.
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10.0),
-        ),
-      )
-    );
-
     widget.prefs.setString('wallet', jsonEncode(Nip60.shared.wallet));
     widget.prefs.setString('proofs', jsonEncode(Nip60.shared.proofEvents));
     widget.prefs.setString('history', jsonEncode(Nip60.shared.histories));
+
+    _callTransactionSnackBar(context, "lightning", int.parse(receipt.amount));
   }
 
   @override
-  void handleBalanceChanged(IMint mint) {
+  void handleBalanceChanged(IMint mint) async {
     num oldBalance = balance;
 
     setState(() {
@@ -295,28 +275,12 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     Nip60.shared.wallet['balance'] = balance.toString();
     Nip60.shared.updateWallet();
 
-    String snackText = balance > oldBalance ? 
-      "Receive ${balance - oldBalance} sat via ecash" :
-      "Send ${oldBalance - balance} sat via ecash";  
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: balance > oldBalance ?Colors.green : Colors.red,
-        content: Text(snackText, 
-          style: const TextStyle(color: Colors.white),
-        ),
-        duration: const Duration(seconds: 3),
-        width: 220, // Width of the SnackBar.
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10.0),
-        ),
-      )
-    );
-
     widget.prefs.setString('wallet', jsonEncode(Nip60.shared.wallet));
     widget.prefs.setString('proofs', jsonEncode(Nip60.shared.proofEvents));
     widget.prefs.setString('history', jsonEncode(Nip60.shared.histories));
+
+    await popUp.future;
+    _callTransactionSnackBar(context, "ecash", (balance - oldBalance).toInt());
   }
 
   Future<void> _fetchWalletEvent() async {
@@ -402,6 +366,7 @@ class _WalletPage extends State<WalletPage> with CashuListener {
   }
 
   _onReceive () async {
+    popUp = Completer();
     var action = await receiveButtomSheet(context);
           
     if (action == 'lightning') {
@@ -409,9 +374,10 @@ class _WalletPage extends State<WalletPage> with CashuListener {
       context.loaderOverlay.show();
       Receipt receipt = await Cashu.shared.getLastestInvoice();
       // ignore: use_build_context_synchronously
-      context.loaderOverlay.hide();
+      context.loaderOverlay.hide();            
 
       GlobalKey dialogKey = GlobalKey();
+
       // ignore: use_build_context_synchronously
       showDialog(context: context,
         builder: (context) => ScaffoldMessenger(
@@ -435,19 +401,9 @@ class _WalletPage extends State<WalletPage> with CashuListener {
                     children: [
                       TextButton(
                         onPressed: () async {
-                          await Clipboard.setData(ClipboardData(text: receipt.request));
+                          Clipboard.setData(ClipboardData(text: receipt.request));
                           // ignore: use_build_context_synchronously
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text("Copy to clipboard!"),
-                              duration: const Duration(seconds: 3),
-                              width: 200, // Width of the SnackBar.
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10.0),
-                              ),
-                            )
-                          );
+                          _callSnackBar(context, "Copy to clipboard!");
                         }, 
                         child: const Text('Copy', style: TextStyle(fontSize: 16))
                       ),
@@ -463,16 +419,19 @@ class _WalletPage extends State<WalletPage> with CashuListener {
             ),
           ),
         ),
-      );
+      ).then((value) {popUp.complete();});
 
       await Cashu.shared.invoicePaid.future;
       if (dialogKey.currentContext != null) {
         Navigator.of(dialogKey.currentContext!).pop();
       }
+    } else {
+      popUp.complete();
     }
   }
 
   _onSend () async {
+    popUp = Completer();
     var action = await sendButtomSheet(context);
     if (action == 'cashu') {
       // ignore: use_build_context_synchronously
@@ -507,17 +466,7 @@ class _WalletPage extends State<WalletPage> with CashuListener {
                         onPressed: () async {
                           await Clipboard.setData(ClipboardData(text: ecash));
                           // ignore: use_build_context_synchronously
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text("Copy to clipboard!"),
-                              duration: const Duration(seconds: 3),
-                              width: 200, // Width of the SnackBar.
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10.0),
-                              ),
-                            )
-                          );
+                          _callSnackBar(context, "Copy to clipboard!");
                         }, 
                         child: const Text('Copy', style: TextStyle(fontSize: 16))
                       ),
@@ -533,7 +482,9 @@ class _WalletPage extends State<WalletPage> with CashuListener {
             ),
           ),
         ),
-      );
+      ).then((value) {popUp.complete();});
+    } else {
+      popUp.complete();
     }
   }
 
@@ -556,6 +507,37 @@ class _WalletPage extends State<WalletPage> with CashuListener {
           ],
         )
       ),       
+    );
+  }
+
+  void _callSnackBar(BuildContext context, String text) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(text),
+        duration: const Duration(seconds: 3),
+        width: 200, // Width of the SnackBar.
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10.0),
+        ),
+      )
+    );
+  }
+
+  void _callTransactionSnackBar(BuildContext context, String method, int amount) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: amount > 0 ?Colors.green : Colors.red,
+        content: Text("${amount > 0 ? "Receive" : "Send"} ${amount.abs()} sat via $method", 
+          style: const TextStyle(color: Colors.white),
+        ),
+        duration: const Duration(seconds: 3),
+        width: 200, // Width of the SnackBar.
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10.0),
+        ),
+      )
     );
   }
 }
