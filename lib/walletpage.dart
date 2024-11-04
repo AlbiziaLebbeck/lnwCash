@@ -131,7 +131,7 @@ class _WalletPage extends State<WalletPage> with CashuListener {
               ),
               FadeIn(
                 child: Center(
-                  child: Text('$balance sats', 
+                  child: Text('$balance sat', 
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.primary,
                       fontSize: 45, 
@@ -265,6 +265,7 @@ class _WalletPage extends State<WalletPage> with CashuListener {
 
   @override
   void handlePaymentCompleted(String paymentKey) async {
+    context.loaderOverlay.hide();
     setState(() {
       balance = 0;
       for (IMint mint in Cashu.shared.mints) {
@@ -443,7 +444,13 @@ class _WalletPage extends State<WalletPage> with CashuListener {
       // ignore: use_build_context_synchronously
       showDialog(context: context,
         builder: (context) => PayQuoteDialog(quotes),
-      ).then((value) {popUp.complete();});
+      ).then((value) {
+        popUp.complete();
+        if (value == "paying") {
+          // ignore: use_build_context_synchronously
+          context.loaderOverlay.show();
+        }
+      });
     } else {
       popUp.complete();
     }

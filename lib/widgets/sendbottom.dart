@@ -97,11 +97,11 @@ class _SendButtomSheet extends State<SendButtomSheet> {
                       borderSide: BorderSide(color: Theme.of(context).colorScheme.primary)
                     ),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(25)),
-                    labelText: 'Amount (sats)',
+                    labelText: 'Amount (sat)',
                   ),
                   validator: (value) {
                     if (value == "") {
-                      return "Please fill amount of sats";
+                      return "Please fill amount of sat";
                     }
 
                     int amount = int.parse(value!);
@@ -133,7 +133,7 @@ class _SendButtomSheet extends State<SendButtomSheet> {
                     Cashu.shared.mints.length,
                     (idx) => DropdownMenuItem(
                       value: Cashu.shared.mints[idx].mintURL, 
-                      child: Text('${Cashu.shared.mints[idx].mintURL} (${Cashu.shared.proofs[Cashu.shared.mints[idx]]!.totalAmount} sats)'),
+                      child: Text('${Cashu.shared.mints[idx].mintURL} (${Cashu.shared.proofs[Cashu.shared.mints[idx]]!.totalAmount} sat)'),
                     ),
                   ),
                   onChanged: (value) {
@@ -286,7 +286,7 @@ class _PayQuoteDialog extends State<PayQuoteDialog> {
                   _selected, 
                   widget.quotes[_selected]!
                 );
-                Navigator.of(context).pop();
+                Navigator.of(context).pop("paying");
               }, 
               child: const Text('Send', style: TextStyle(fontSize: 16))
             ),

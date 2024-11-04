@@ -60,7 +60,7 @@ class MintCard extends StatelessWidget {
                 children: [
                   const Text("Amount", style: TextStyle(fontSize: 10, fontWeight: FontWeight.w400),),
                   const SizedBox(height: 3,),
-                  Text('${Cashu.shared.proofs[mintData]!.isEmpty ? 0 : Cashu.shared.proofs[mintData]!.totalAmount} sats', maxLines:1, overflow: TextOverflow.ellipsis, 
+                  Text('${Cashu.shared.proofs[mintData]!.isEmpty ? 0 : Cashu.shared.proofs[mintData]!.totalAmount} sat', maxLines:1, overflow: TextOverflow.ellipsis, 
                     style: TextStyle(
                       fontSize: 12, 
                       fontWeight: FontWeight.w500,

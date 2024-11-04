@@ -153,11 +153,11 @@ class _ReceiveButtomSheet extends State<ReceiveButtomSheet> {
                       borderSide: BorderSide(color: Theme.of(context).colorScheme.primary)
                     ),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(25)),
-                    labelText: 'Amount (sats)',
+                    labelText: 'Amount (sat)',
                   ),
                   validator: (value) {
                     if (value == "") {
-                      return "Please fill amount of sats";
+                      return "Please fill amount of sat";
                     }
 
                     int amount = int.parse(value!);

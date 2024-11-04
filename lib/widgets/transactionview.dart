@@ -59,7 +59,7 @@ class TransactionView extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              '${(transactionData['type'] == 'out' ? '-':'')}${transactionData['amount']!} sats', 
+              '${(transactionData['type'] == 'out' ? '-':'')}${transactionData['amount']!} sat', 
                 style: TextStyle(
                 fontSize: 16, 
                 fontWeight: FontWeight.w500,
