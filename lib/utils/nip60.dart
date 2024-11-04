@@ -205,16 +205,16 @@ class Nip60 {
 
   Future<void> rollOverTokenEvent(List<Proof> proofs, String mintUrl, List<String> evtIds) async {
     List<String> rolloverEvent = [];
-    List<Proof> unspendProof = [];
+    List<Proof> unspendProofs = [];
     eventProofs.forEach((evt,prfs) {
       final spendProofs = prfs.where((p) => proofs.contains(p)).toList();
       if (spendProofs.isNotEmpty) {
         rolloverEvent.add(evt);
-        unspendProof.addAll(prfs.where((p) => !spendProofs.contains(p)));
+        unspendProofs.addAll(prfs.where((p) => !spendProofs.contains(p)));
       }
     });
 
-    if (unspendProof.isNotEmpty) evtIds.add(await createTokenEvent(unspendProof, mintUrl));
+    if (unspendProofs.isNotEmpty) evtIds.add(await createTokenEvent(unspendProofs, mintUrl));
     await createHistoryEvent(evtIds, rolloverEvent);
     await deleteTokenEvent(rolloverEvent);
   }

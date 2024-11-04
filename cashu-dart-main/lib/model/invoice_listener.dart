@@ -9,4 +9,5 @@ abstract mixin class CashuListener {
   void handleMintListChanged(List<IMint> mints) { }
   void handlePaymentCompleted(String paymentKey) { }
   void handleHistoryChanged() { }
+  void handleError(String errorMsg) { }
 }

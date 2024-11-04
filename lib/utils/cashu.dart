@@ -239,6 +239,7 @@ class Cashu {
     _ecashCreated = Completer();
     final List<Proof> usedProofs = getProofsWithAmount(mint, amount);
     final sendingProofs = <Proof>[];
+    final change = <Proof>[];
     final newEvt = <String>[];
 
     if (usedProofs.totalAmount > amount) {
@@ -246,8 +247,7 @@ class Cashu {
         mint: mint, 
         swapProofs: usedProofs,
         supportAmount: amount,
-      );
-      final change = <Proof>[];  
+      );  
       for (final proof in swapedProof!) {
         if (sendingProofs.totalAmount < amount) {
           sendingProofs.add(proof);
@@ -255,16 +255,8 @@ class Cashu {
           change.add(proof);
         }
       }
-      _updateProofs(change, mint);
-      
-      newEvt.add(await Nip60.shared.createTokenEvent(change, mint.mintURL));
     } else {
       sendingProofs.addAll([...usedProofs]);
-    }
-    
-    await Nip60.shared.rollOverTokenEvent(usedProofs, mint.mintURL, newEvt);
-    for (final proof in usedProofs) {
-      proofs[mint]!.remove(proof);
     }
 
     final ecash = Nut0.encodedToken(
@@ -275,6 +267,16 @@ class Cashu {
     );
     _ecashToken.add(ecash);
     _ecashCreated.complete();
+
+    if (change.isNotEmpty) {
+      _updateProofs(change, mint);
+      newEvt.add(await Nip60.shared.createTokenEvent(change, mint.mintURL));
+    }
+
+    await Nip60.shared.rollOverTokenEvent(usedProofs, mint.mintURL, newEvt);
+    for (final proof in usedProofs) {
+      proofs[mint]!.remove(proof);
+    }
 
     notifyListenerForBalanceChanged(mint);
   }
@@ -358,6 +360,7 @@ class Cashu {
     int amount = int.parse(quote.amount) + int.parse(quote.fee);
     final List<Proof> usedProofs = getProofsWithAmount(mint, amount);
     final sendingProofs = <Proof>[];
+    final change = <Proof>[];
     final newEvt = <String>[];
 
     if (usedProofs.totalAmount > amount) {
@@ -365,8 +368,7 @@ class Cashu {
         mint: mint, 
         swapProofs: usedProofs,
         supportAmount: amount,
-      );
-      final change = <Proof>[];  
+      );  
       for (final proof in swapedProof!) {
         if (sendingProofs.totalAmount < amount) {
           sendingProofs.add(proof);
@@ -374,16 +376,8 @@ class Cashu {
           change.add(proof);
         }
       }
-      _updateProofs(change, mint);
-            
-      newEvt.add(await Nip60.shared.createTokenEvent(change, mint.mintURL));
     } else {
       sendingProofs.addAll([...usedProofs]);
-    }
-    
-    await Nip60.shared.rollOverTokenEvent(usedProofs, mint.mintURL, newEvt);
-    for (final proof in usedProofs) {
-      proofs[mint]!.remove(proof);
     }
 
     final meltResponse = await Nut8.payingTheQuote(
@@ -392,9 +386,42 @@ class Cashu {
       inputs: sendingProofs,
       outputs: blindedMessages,
     );
-    if (!meltResponse.isSuccess) return;
+
+    if (!meltResponse.isSuccess) {
+      if (change.isNotEmpty) {
+        change.addAll(sendingProofs);
+        _updateProofs(change, mint);
+        newEvt.add(await Nip60.shared.createTokenEvent(change, mint.mintURL));
+
+        await Nip60.shared.rollOverTokenEvent(usedProofs, mint.mintURL, newEvt);
+        for (final proof in usedProofs) {
+          proofs[mint]!.remove(proof);
+        }
+      }
+      notifyError(meltResponse.errorMsg);
+      return;
+    }
+
+    final ( _, _, feeChange ) = meltResponse.data;
+    final newProofs = constructProofs(mint, feeChange, secrets, rs);
+    for (final proof in newProofs) {
+      if (int.parse(proof.amount) > 0) {
+        change.add(proof);
+        amount -= int.parse(proof.amount);
+      }
+    }
+
+    if (change.isNotEmpty) {
+      _updateProofs(change, mint);
+      newEvt.add(await Nip60.shared.createTokenEvent(change, mint.mintURL));
+    }
+
+    await Nip60.shared.rollOverTokenEvent(usedProofs, mint.mintURL, newEvt);
+    for (final proof in usedProofs) {
+      proofs[mint]!.remove(proof);
+    }
     
-    notifyListenerForBalanceChanged(mint);
+    notifyListenerForPaymentCompleted(amount.toString());
   }
 
   List<Proof> constructProofs(
@@ -509,6 +536,18 @@ class Cashu {
   void notifyListenerForBalanceChanged(IMint mint) {
     for (var e in _listeners) {
       e.handleBalanceChanged(mint);
+    }
+  }
+
+  void notifyListenerForPaymentCompleted(String paymentKey) {
+    for (var e in _listeners) {
+      e.handlePaymentCompleted(paymentKey);
+    }
+  }
+
+  void notifyError(String errorMsg) {
+    for (var e in _listeners) {
+      e.handleError(errorMsg);
     }
   }
 }

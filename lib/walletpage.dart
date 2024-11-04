@@ -264,6 +264,25 @@ class _WalletPage extends State<WalletPage> with CashuListener {
   }
 
   @override
+  void handlePaymentCompleted(String paymentKey) async {
+    setState(() {
+      balance = 0;
+      for (IMint mint in Cashu.shared.mints) {
+        balance += Cashu.shared.proofs[mint]!.totalAmount;
+      }
+    });
+
+    Nip60.shared.wallet['balance'] = balance.toString();
+    Nip60.shared.updateWallet();
+
+    widget.prefs.setString('wallet', jsonEncode(Nip60.shared.wallet));
+    widget.prefs.setString('proofs', jsonEncode(Nip60.shared.proofEvents));
+    widget.prefs.setString('history', jsonEncode(Nip60.shared.histories));
+
+    _callTransactionSnackBar(context, "lightning", -int.parse(paymentKey));
+  }
+
+  @override
   void handleBalanceChanged(IMint mint) async {
     num oldBalance = balance;
 
@@ -284,6 +303,11 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     await popUp.future;
     // ignore: use_build_context_synchronously
     _callTransactionSnackBar(context, "ecash", (balance - oldBalance).toInt());
+  }
+
+  @override
+  void handleError(String errorMsg) {
+    _callSnackBar(context, errorMsg);
   }
 
   Future<void> _fetchWalletEvent() async {
