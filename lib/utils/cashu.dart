@@ -6,6 +6,7 @@ import 'package:cashu_dart/business/mint/mint_helper.dart';
 import 'package:cashu_dart/core/DHKE_helper.dart';
 import 'package:cashu_dart/core/mint_actions.dart';
 import 'package:cashu_dart/core/nuts/nut_00.dart';
+import 'package:cashu_dart/core/nuts/v1/nut.dart';
 import 'package:cashu_dart/model/invoice.dart';
 import 'package:cashu_dart/model/invoice_listener.dart';
 import 'package:cashu_dart/model/keyset_info.dart';
@@ -13,8 +14,12 @@ import 'package:cashu_dart/model/mint_model.dart';
 import 'package:cashu_dart/utils/network/response.dart';
 import 'package:cashu_dart/utils/task_scheduler.dart';
 import 'package:cashu_dart/utils/tools.dart';
+
+import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
+
 import 'package:lnwcash/utils/nip60.dart';
+
 // ignore: depend_on_referenced_packages
 import 'package:pointycastle/export.dart';
 
@@ -31,6 +36,9 @@ class Cashu {
   final List<CashuListener> _listeners = [];
   Completer _invoiceCreated = Completer();
   Completer invoicePaid = Completer();
+
+  final _quotes = <IMint,MeltQuotePayload>{};
+  Completer _quoteCreated = Completer();
 
   TaskScheduler? invoiceChecker;
 
@@ -75,6 +83,11 @@ class Cashu {
   Future<String> getLastestEcash() async {
     await _ecashCreated.future;
     return _ecashToken.last;
+  }
+
+  Future<Map<IMint,MeltQuotePayload>> getLastestQuote() async {
+    await _quoteCreated.future;
+    return _quotes;
   }
 
   Future<void> redeemEcash({
@@ -136,26 +149,6 @@ class Cashu {
       return constructProofs(mint, response.data, secrets, rs);
     }
 
-    return null;
-  }
-
-  List<int>? _findOneSubsetWithSum(List<int> nums, int target) {
-    List<List<int>?> dp = List.filled(target + 1, null);
-    dp[0] = [];
-
-    for (int i = 0; i < nums.length; i++) {
-      int num = nums[i];
-
-      for (int t = target; t >= num; t--) {
-        if (dp[t - num] != null) {
-          dp[t] = List.from(dp[t - num]!)..add(i);
-
-          if (t == target) {
-            return dp[target];
-          }
-        }
-      }
-    }
     return null;
   }
 
@@ -244,7 +237,49 @@ class Cashu {
 
   Future<void> sendEcash(IMint mint, int amount) async {
     _ecashCreated = Completer();
-    bool swap = false;
+    final List<Proof> usedProofs = getProofsWithAmount(mint, amount);
+    final sendingProofs = <Proof>[];
+    final newEvt = <String>[];
+
+    if (usedProofs.totalAmount > amount) {
+      final swapedProof = await swapProofs(
+        mint: mint, 
+        swapProofs: usedProofs,
+        supportAmount: amount,
+      );
+      final change = <Proof>[];  
+      for (final proof in swapedProof!) {
+        if (sendingProofs.totalAmount < amount) {
+          sendingProofs.add(proof);
+        } else {
+          change.add(proof);
+        }
+      }
+      _updateProofs(change, mint);
+      
+      newEvt.add(await Nip60.shared.createTokenEvent(change, mint.mintURL));
+    } else {
+      sendingProofs.addAll([...usedProofs]);
+    }
+    
+    await Nip60.shared.rollOverTokenEvent(usedProofs, mint.mintURL, newEvt);
+    for (final proof in usedProofs) {
+      proofs[mint]!.remove(proof);
+    }
+
+    final ecash = Nut0.encodedToken(
+      Token(
+        entries: [TokenEntry(mint: mint.mintURL, proofs: sendingProofs)],
+        unit: "sat",
+      ),
+    );
+    _ecashToken.add(ecash);
+    _ecashCreated.complete();
+
+    notifyListenerForBalanceChanged(mint);
+  }
+
+  List<Proof> getProofsWithAmount(IMint mint, int amount) {
     final List<Proof> proofsToSend = [];
     List<int>? proofIdx = _findOneSubsetWithSum(proofs[mint]!.map((p) => p.amountNum).toList(), amount);
     if (proofIdx != null) {
@@ -256,61 +291,110 @@ class Cashu {
         if (proofsToSend.totalAmount >= amount) break;
         proofsToSend.add(proof);
       }
-      if (proofsToSend.totalAmount > amount) swap = true;
     }
 
-    if (swap) {
+    return proofsToSend;
+  }
+
+  List<int>? _findOneSubsetWithSum(List<int> nums, int target) {
+    List<List<int>?> dp = List.filled(target + 1, null);
+    dp[0] = [];
+
+    for (int i = 0; i < nums.length; i++) {
+      int num = nums[i];
+
+      for (int t = target; t >= num; t--) {
+        if (dp[t - num] != null) {
+          dp[t] = List.from(dp[t - num]!)..add(i);
+
+          if (t == target) {
+            return dp[target];
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+
+  String? payingLightningInvoice(String invoice) {
+    final req = _tryConstructRequestFromPr(invoice);
+    if (req == null) return 'Lightning invoice is incorrect';
+
+    final amount = (req.amount * Decimal.fromInt(100000000)).toBigInt();
+    List<IMint> availableMint = [];
+    for (final mint in Cashu.shared.mints) {
+      if (BigInt.from(Cashu.shared.proofs[mint]!.totalAmount) >= amount) {
+        availableMint.add(mint);
+      }
+    }
+    if (availableMint.isEmpty) return "Mint balance is insufficient";
+    
+    requestQuote(availableMint, req);
+    return null;
+  }
+
+  Future<void> requestQuote(List<IMint> mints, Bolt11PaymentRequest req) async {
+    _quoteCreated = Completer();
+    for (final mint in mints) {
+      final quoteResponse = await Nut5.requestMeltQuote(
+        mintURL: mint.mintURL,
+        request: req.paymentRequest,
+      );
+      if (quoteResponse.isSuccess && quoteResponse.data.quote.isNotEmpty) {
+        _quotes[mint] = quoteResponse.data;
+      }
+    }
+
+    _quoteCreated.complete();
+  }
+
+  payQuote(IMint mint, MeltQuotePayload quote) async {
+    final ( blindedMessages, secrets, rs, _ ) = DHKEHelper.createBlankOutputs(
+      keysetId: keysets[mint]!.firstOrNull!.id,
+      amount: int.parse(quote.fee),
+    );
+
+    int amount = int.parse(quote.amount) + int.parse(quote.fee);
+    final List<Proof> usedProofs = getProofsWithAmount(mint, amount);
+    final sendingProofs = <Proof>[];
+    final newEvt = <String>[];
+
+    if (usedProofs.totalAmount > amount) {
       final swapedProof = await swapProofs(
         mint: mint, 
-        swapProofs: proofsToSend,
+        swapProofs: usedProofs,
         supportAmount: amount,
       );
-      final swapedToSend = <Proof>[];
       final change = <Proof>[];  
       for (final proof in swapedProof!) {
-        if (swapedToSend.totalAmount < amount) {
-          swapedToSend.add(proof);
+        if (sendingProofs.totalAmount < amount) {
+          sendingProofs.add(proof);
         } else {
           change.add(proof);
         }
       }
       _updateProofs(change, mint);
-      
-      final ecash = Nut0.encodedToken(
-        Token(
-          entries: [TokenEntry(mint: mint.mintURL, proofs: swapedToSend)],
-          unit: "sat",
-        ),
-      );
-      _ecashToken.add(ecash);
-      _ecashCreated.complete();
-      
-      final evtId = await Nip60.shared.createTokenEvent(change, mint.mintURL);
-
-      await Nip60.shared.rollOverTokenEvent(proofsToSend, mint.mintURL, [evtId]);
-      for (final proof in proofsToSend) {
-        proofs[mint]!.remove(proof);
-      }
+            
+      newEvt.add(await Nip60.shared.createTokenEvent(change, mint.mintURL));
     } else {
-      final ecash = Nut0.encodedToken(
-        Token(
-          entries: [TokenEntry(mint: mint.mintURL, proofs: proofsToSend)],
-          unit: "sat",
-        ),
-      );
-      _ecashToken.add(ecash);
-      _ecashCreated.complete();
-
-      await Nip60.shared.rollOverTokenEvent(proofsToSend, mint.mintURL, []);
-      for (final proof in proofsToSend) {
-        proofs[mint]!.remove(proof);
-      }
+      sendingProofs.addAll([...usedProofs]);
     }
+    
+    await Nip60.shared.rollOverTokenEvent(usedProofs, mint.mintURL, newEvt);
+    for (final proof in usedProofs) {
+      proofs[mint]!.remove(proof);
+    }
+
+    final meltResponse = await Nut8.payingTheQuote(
+      mintURL: mint.mintURL, 
+      quote: quote.quote,
+      inputs: sendingProofs,
+      outputs: blindedMessages,
+    );
+    if (!meltResponse.isSuccess) return;
+    
     notifyListenerForBalanceChanged(mint);
-  }
-
-  Future<void> payingLightningInvoice(Bolt11PaymentRequest pr) async {
-
   }
 
   List<Proof> constructProofs(
@@ -356,48 +440,6 @@ class Cashu {
     }
   }
 
-  // String proofSerializer() {
-  //   Map<String,List<Map<String,dynamic>>> proofsToJson = {};
-  //   proofs.forEach((mint, prfs) {
-  //     List<Map<String,dynamic>> prfsToJson = [];
-  //     for (var prf in prfs) {
-  //       Map<String,dynamic> strPrf = {
-  //         'id': prf.id,
-  //         'amount': prf.amount,
-  //         'secret': prf.secret,
-  //         'C': prf.C,
-  //       };
-  //       // if(prf.dleq != null && prf.dleq!.isNotEmpty) {
-  //       //   prfToJson = '{\"id":\"${prf.id}\",\"amount\":\"${prf.amount},\"secret\":\"${prf.secret}\",\"C\",\"${prf.C}\",\"dleq":{"e":"${prf.dleq!['e']}","s":"${prf.dleq!['s']}","r":"${prf.dleq!['r']}"}}';
-  //       // }
-  //       prfsToJson.add(strPrf);
-  //     }
-  //     proofsToJson[mint.mintURL] =  prfsToJson;
-  //   });
-  //   return jsonEncode(proofsToJson);
-  // }
-
-  // Future<void> proofDeserializer (String jsonProofs) async {
-  //   Map<String,dynamic> getProofs = Map.castFrom(jsonDecode(jsonProofs));
-  //   List<String> mintStr = mints.map((m) => m.mintURL).toList(); 
-  //    for (var mintUrl in getProofs.keys) {
-  //     if (!mintStr.contains(mintUrl)) {
-  //       bool ok = await addMint(mintUrl);
-  //       if (!ok) continue;
-  //     }
-
-  //     IMint mint = getMint(mintUrl);
-
-  //     for (var prf in getProofs[mintUrl]!) {
-  //       proofs[mint]!.add(Proof(
-  //         id: prf['id']!, 
-  //         amount: prf['amount']!, 
-  //         secret: prf['secret']!, 
-  //         C: prf['C']!,
-  //       ));
-  //     }
-  //    }
-  // }
 
   static String ecPointToHex(ECPoint point, [bool compressed = true]) {
     return point.getEncoded(compressed).map(
@@ -429,7 +471,7 @@ class Cashu {
     'lnurl://',
   ];
 
-  static Bolt11PaymentRequest? tryConstructRequestFromPr(String pr) {
+  static Bolt11PaymentRequest? _tryConstructRequestFromPr(String pr) {
     pr = pr.trim();
     for (var prefix in _lnPrefix) {
       if (pr.startsWith(prefix)) {

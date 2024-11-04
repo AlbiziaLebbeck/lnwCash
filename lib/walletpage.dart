@@ -23,7 +23,9 @@ import 'package:lnwcash/utils/cashu.dart';
 import 'package:lnwcash/widgets/profilecard.dart';
 import 'package:lnwcash/widgets/transactionview.dart';
 import 'package:lnwcash/widgets/mintcard.dart';
-import 'package:lnwcash/widgets/paymentbottom.dart';
+import 'package:lnwcash/widgets/receivebottom.dart';
+import 'package:lnwcash/widgets/sendbottom.dart';
+
 import 'package:lnwcash/widgets/relaymanager.dart';
 import 'package:lnwcash/widgets/walletmanager.dart';
 import 'package:lnwcash/widgets/mintmanager.dart';
@@ -411,6 +413,12 @@ class _WalletPage extends State<WalletPage> with CashuListener {
         builder: (context) => ScaffoldMessenger(
           child: _qrDialog("Ecash token", ecash), 
         ),
+      ).then((value) {popUp.complete();});
+    } else if (action == 'lightning') {
+      final quotes = await Cashu.shared.getLastestQuote();
+      // ignore: use_build_context_synchronously
+      showDialog(context: context,
+        builder: (context) => PayQuoteDialog(quotes),
       ).then((value) {popUp.complete();});
     } else {
       popUp.complete();
