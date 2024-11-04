@@ -45,7 +45,7 @@ class LoginPage extends StatelessWidget {
                 ),
               ),
               FadeInLeft(
-                child: Text('A Cashu Wallet\nFor Anyone, Anytime and Anywhere', 
+                child: Text('Lightning and Nostr Wallet for Cashu', 
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.primary, 
                     fontSize: 16,
