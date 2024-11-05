@@ -39,7 +39,7 @@ class Signer {
     peerPub ??= pub!;
     return isNip07 ? 
       nip07nip44Encrypt(peerPub, content): 
-      Nip4.encryptContent(content, peerPub, pub!, priv!);
+      Nip44.encryptContent(content, peerPub, pub!, priv!);
   }
 
   Future<String?> nip44Decrypt(String content, {String? peerPub}) {
