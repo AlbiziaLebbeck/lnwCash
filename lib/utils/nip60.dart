@@ -203,11 +203,12 @@ class Nip60 {
     RelayPool.shared.send(event!.serialize());
   }
 
-  Future<void> rollOverTokenEvent(List<Proof> proofs, String mintUrl, List<String> evtIds) async {
+  Future<void> rollOverTokenEvent(List<Proof> inProofs, List<Proof> outProofs, String mintUrl) async {
+    List<String> evtIds = [];
     List<String> rolloverEvent = [];
     List<Proof> unspendProofs = [];
     eventProofs.forEach((evt,prfs) {
-      final spendProofs = prfs.where((p) => proofs.contains(p)).toList();
+      final spendProofs = prfs.where((p) => inProofs.contains(p)).toList();
       if (spendProofs.isNotEmpty) {
         rolloverEvent.add(evt);
         unspendProofs.addAll(prfs.where((p) => !spendProofs.contains(p)));
@@ -215,6 +216,8 @@ class Nip60 {
     });
 
     if (unspendProofs.isNotEmpty) evtIds.add(await createTokenEvent(unspendProofs, mintUrl));
+    if (outProofs.isNotEmpty) evtIds.add(await createTokenEvent(outProofs, mintUrl));
+
     await createHistoryEvent(evtIds, rolloverEvent);
     await deleteTokenEvent(rolloverEvent);
   }

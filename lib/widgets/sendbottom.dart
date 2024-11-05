@@ -4,6 +4,7 @@ import 'package:cashu_dart/model/mint_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lnwcash/utils/cashu.dart';
+import 'package:qrcode_reader_web/qrcode_reader_web.dart';
 
 Future<dynamic> sendButtomSheet(context) async{
   return showModalBottomSheet(context: context,
@@ -176,16 +177,41 @@ class _SendButtomSheet extends State<SendButtomSheet> {
                       borderRadius: BorderRadius.circular(25),
                     ),
                     labelText: 'Paste a lightning invoice',
-                    suffixIcon: Padding(
-                      padding: const EdgeInsetsDirectional.only(top: 70, end: 5),
-                      child: IconButton(
-                        onPressed: () async {
-                          final invoice = await Clipboard.getData('text/plain');
-                          if (invoice != null) {
-                            _lightningController.text = invoice.text ?? '';
-                          }
-                        },
-                        icon: const Icon(Icons.paste),
+                    suffixIcon: Container(
+                      margin: const EdgeInsets.only(right: 5),
+                      child:Column(
+                        // mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            onPressed: () async {
+                              showDialog(context: context,
+                                builder: (context) => AlertDialog(
+                                  content: SizedBox(
+                                    width: 320.0,
+                                    height: 320.0,
+                                    child: QRCodeReaderSquareWidget(
+                                      onDetect: (QRCodeCapture capture) {
+                                        _lightningController.text = capture.raw;
+                                        Navigator.of(context).pop();
+                                      },
+                                      size: 320,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.qr_code),
+                          ), 
+                          IconButton(
+                            onPressed: () async {
+                              final invoice = await Clipboard.getData('text/plain');
+                              if (invoice != null) {
+                                _lightningController.text = invoice.text ?? '';
+                              }
+                            },
+                            icon: const Icon(Icons.paste),
+                          ),
+                        ],
                       ),
                     ),
                   ),

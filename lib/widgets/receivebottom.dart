@@ -3,6 +3,7 @@ import 'package:cashu_dart/model/mint_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lnwcash/utils/cashu.dart';
+import 'package:qrcode_reader_web/qrcode_reader_web.dart';
 
 Future<dynamic> receiveButtomSheet(context) async{
   return showModalBottomSheet(context: context,
@@ -98,16 +99,41 @@ class _ReceiveButtomSheet extends State<ReceiveButtomSheet> {
                       borderRadius: BorderRadius.circular(25),
                     ),
                     labelText: 'Paste a cashu token',
-                    suffixIcon: Padding(
-                      padding: const EdgeInsetsDirectional.only(top: 70, end: 5),
-                      child: IconButton(
-                        onPressed: () async {
-                          final ecash = await Clipboard.getData('text/plain');
-                          if (ecash != null) {
-                            _ecashController.text = ecash.text ?? '';
-                          }
-                        },
-                        icon: const Icon(Icons.paste),
+                    suffixIcon: Container(
+                      margin: const EdgeInsets.only(right: 5),
+                      child: Column(
+                        // mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            onPressed: () async {
+                              showDialog(context: context,
+                                builder: (context) => AlertDialog(
+                                  content: SizedBox(
+                                    width: 320.0,
+                                    height: 320.0,
+                                    child: QRCodeReaderSquareWidget(
+                                      onDetect: (QRCodeCapture capture) {
+                                        _ecashController.text = capture.raw;
+                                        Navigator.of(context).pop();
+                                      },
+                                      size: 320,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.qr_code),
+                          ),
+                          IconButton(
+                            onPressed: () async {
+                              final ecash = await Clipboard.getData('text/plain');
+                              if (ecash != null) {
+                                _ecashController.text = ecash.text ?? '';
+                              }
+                            },
+                            icon: const Icon(Icons.paste),
+                          ),
+                        ]
                       ),
                     ),
                   ),

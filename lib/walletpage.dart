@@ -308,6 +308,7 @@ class _WalletPage extends State<WalletPage> with CashuListener {
 
   @override
   void handleError(String errorMsg) {
+    context.loaderOverlay.hide();
     _callSnackBar(context, errorMsg);
   }
 

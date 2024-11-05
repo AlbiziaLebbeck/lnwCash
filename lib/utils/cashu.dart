@@ -270,10 +270,9 @@ class Cashu {
 
     if (change.isNotEmpty) {
       _updateProofs(change, mint);
-      newEvt.add(await Nip60.shared.createTokenEvent(change, mint.mintURL));
     }
 
-    await Nip60.shared.rollOverTokenEvent(usedProofs, mint.mintURL, newEvt);
+    await Nip60.shared.rollOverTokenEvent(usedProofs, change, mint.mintURL);
     for (final proof in usedProofs) {
       proofs[mint]!.remove(proof);
     }
@@ -338,6 +337,7 @@ class Cashu {
 
   Future<void> requestQuote(List<IMint> mints, Bolt11PaymentRequest req) async {
     _quoteCreated = Completer();
+    _quotes.clear();
     for (final mint in mints) {
       final quoteResponse = await Nut5.requestMeltQuote(
         mintURL: mint.mintURL,
@@ -391,9 +391,8 @@ class Cashu {
       if (change.isNotEmpty) {
         change.addAll(sendingProofs);
         _updateProofs(change, mint);
-        newEvt.add(await Nip60.shared.createTokenEvent(change, mint.mintURL));
 
-        await Nip60.shared.rollOverTokenEvent(usedProofs, mint.mintURL, newEvt);
+        await Nip60.shared.rollOverTokenEvent(usedProofs, change, mint.mintURL);
         for (final proof in usedProofs) {
           proofs[mint]!.remove(proof);
         }
@@ -413,10 +412,9 @@ class Cashu {
 
     if (change.isNotEmpty) {
       _updateProofs(change, mint);
-      newEvt.add(await Nip60.shared.createTokenEvent(change, mint.mintURL));
     }
 
-    await Nip60.shared.rollOverTokenEvent(usedProofs, mint.mintURL, newEvt);
+    await Nip60.shared.rollOverTokenEvent(usedProofs, change, mint.mintURL);
     for (final proof in usedProofs) {
       proofs[mint]!.remove(proof);
     }

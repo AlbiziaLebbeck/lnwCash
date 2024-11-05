@@ -48,7 +48,8 @@ dependencies:
   qr_flutter: ^4.1.0
   bolt11_decoder: ^1.0.2
   decimal: ^2.3.3
-
+  
+  qrcode_reader_web: ^1.1.1
 
 dev_dependencies:
   flutter_test:

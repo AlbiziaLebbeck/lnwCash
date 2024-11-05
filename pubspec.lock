@@ -611,6 +611,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.1.0"
+  qrcode_reader_web:
+    dependency: "direct main"
+    description:
+      name: qrcode_reader_web
+      sha256: f9354eb988505a4add986b1279acc7b53047dd8b67943d5a8b263d532e9fc4a5
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.1.1"
   rational:
     dependency: transitive
     description:
