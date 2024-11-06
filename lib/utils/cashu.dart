@@ -240,7 +240,6 @@ class Cashu {
     final List<Proof> usedProofs = getProofsWithAmount(mint, amount);
     final sendingProofs = <Proof>[];
     final change = <Proof>[];
-    final newEvt = <String>[];
 
     if (usedProofs.totalAmount > amount) {
       final swapedProof = await swapProofs(
@@ -361,7 +360,6 @@ class Cashu {
     final List<Proof> usedProofs = getProofsWithAmount(mint, amount);
     final sendingProofs = <Proof>[];
     final change = <Proof>[];
-    final newEvt = <String>[];
 
     if (usedProofs.totalAmount > amount) {
       final swapedProof = await swapProofs(

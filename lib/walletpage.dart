@@ -285,6 +285,7 @@ class _WalletPage extends State<WalletPage> with CashuListener {
 
   @override
   void handleBalanceChanged(IMint mint) async {
+    context.loaderOverlay.hide();
     num oldBalance = balance;
 
     setState(() {
@@ -420,6 +421,8 @@ class _WalletPage extends State<WalletPage> with CashuListener {
         Navigator.of(dialogKey.currentContext!).pop();
       }
     } else {
+      // ignore: use_build_context_synchronously
+      context.loaderOverlay.show();
       popUp.complete();
     }
   }
@@ -428,8 +431,6 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     popUp = Completer();
     var action = await sendButtomSheet(context);
     if (action == 'cashu') {
-      // ignore: use_build_context_synchronously
-      context.loaderOverlay.show();
       String ecash = await Cashu.shared.getLastestEcash();
       // ignore: use_build_context_synchronously
       context.loaderOverlay.hide();

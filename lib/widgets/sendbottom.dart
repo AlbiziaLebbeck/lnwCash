@@ -4,6 +4,7 @@ import 'package:cashu_dart/model/mint_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lnwcash/utils/cashu.dart';
+import 'package:loader_overlay/loader_overlay.dart';
 import 'package:qrcode_reader_web/qrcode_reader_web.dart';
 
 Future<dynamic> sendButtomSheet(context) async{
@@ -115,6 +116,7 @@ class _SendButtomSheet extends State<SendButtomSheet> {
                       return "Mint balance is insufficient";
                     }  
                     
+                    context.loaderOverlay.show();
                     Cashu.shared.sendEcash(mint, amount);
                     return null;
                   },
