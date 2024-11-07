@@ -90,6 +90,7 @@ class _SignupFormState extends State<SignupForm> {
               widget.prefs.setString('loginType', 'nsec');
               widget.prefs.setString('priv', keychain.private);
               widget.prefs.setString('pub', keychain.public);
+              widget.prefs.setString('name', value);
 
               return null;
             },

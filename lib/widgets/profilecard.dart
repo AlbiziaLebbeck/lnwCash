@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:lnwcash/utils/nip01.dart';
 import 'package:lnwcash/utils/subscription.dart';
 import 'package:nostr_core_dart/nostr.dart';
 
@@ -7,9 +8,10 @@ import 'package:lnwcash/widgets/avatar_image.dart';
 import 'package:lnwcash/utils/relay.dart';
 
 class ProfileCard extends StatefulWidget {
-  const ProfileCard(this._pub, {super.key});
+  const ProfileCard(this._pub, {super.key, this.name = ''});
 
   final String _pub;
+  final String name;
 
   @override
   State<StatefulWidget> createState() => _ProfileCard();
@@ -28,6 +30,8 @@ class _ProfileCard extends State<ProfileCard> {
 
   void _loadPreference() async {
     
+    bool hasProfile = false;
+
     Subscription subscription = Subscription(
       filters: [Filter(
         kinds: [0],
@@ -35,14 +39,25 @@ class _ProfileCard extends State<ProfileCard> {
         limit: 10,
       )], 
       onEvent: (event) {
-        dynamic content = jsonDecode(event['content']); 
+        hasProfile = true;
+        dynamic content = jsonDecode(event['content']);
         setState(() {
           name = content["name"];
-          picture = content['picture'];
+          picture = content['picture'] ?? 'assets/nopicAvatar.png';
         });
       }
     );
-    RelayPool.shared.subscribe(subscription);
+    RelayPool.shared.subscribe(subscription, timeout: 3);
+    await subscription.timeout.future;
+    if (!hasProfile) {
+      Event? event = await createEvent(
+        kind: 0, 
+        tags: [], 
+        content: '{"name":"${widget.name}"}',
+      );
+      RelayPool.shared.send(event!.serialize());
+      name = widget.name;
+    }
   }
 
   @override

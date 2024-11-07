@@ -44,7 +44,7 @@ class _WalletPage extends State<WalletPage> with CashuListener {
 
   late final String pub;
   late final String priv;
-  late final String login;
+  late final String name;
 
   Completer popUp = Completer();
 
@@ -60,7 +60,8 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     super.initState();
 
     pub = widget.prefs.getString('pub') ?? '';
-    priv = widget.prefs.getString('priv') ?? ''; 
+    priv = widget.prefs.getString('priv') ?? '';
+    name = widget.prefs.getString('name') ?? '';
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await Signer.shared.initialize(priv);
@@ -86,9 +87,13 @@ class _WalletPage extends State<WalletPage> with CashuListener {
 
     widget.prefs.setStringList('relays', RelayPool.shared.getRelayURL());
 
+    // ignore: use_build_context_synchronously
+    context.loaderOverlay.show();
     await _fetchWalletEvent();
     await _mintSetup();
     await _fetchProofEvent();
+    // ignore: use_build_context_synchronously
+    context.loaderOverlay.hide();
     _fetchHistoryEvent();
     
     widget.prefs.setString('wallet', jsonEncode(Nip60.shared.wallet));
@@ -117,7 +122,7 @@ class _WalletPage extends State<WalletPage> with CashuListener {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 5,),
-              ProfileCard(pub),
+              ProfileCard(pub, name: name),
               const SizedBox(height: 25,),
               FadeIn(
                 child: Center(
@@ -322,13 +327,16 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     }
 
     Subscription subscription = Nip60.shared.fetchWalletEvent();
-    context.loaderOverlay.show();
     await subscription.timeout.future;
     RelayPool.shared.unsubscribe(subscription.id);
-    if (mounted) context.loaderOverlay.hide();
     
     if (Nip60.shared.wallet.isEmpty) {
-      if (mounted) await walletManager(context);
+      // ignore: use_build_context_synchronously
+      context.loaderOverlay.hide();
+      // ignore: use_build_context_synchronously
+      await walletManager(context);
+      // ignore: use_build_context_synchronously
+      context.loaderOverlay.show();
     }
     
     setState(() {
@@ -351,10 +359,8 @@ class _WalletPage extends State<WalletPage> with CashuListener {
 
   Future<void> _fetchProofEvent() async { 
     Subscription subscription = Nip60.shared.fetchProofEvent();
-    if (mounted) context.loaderOverlay.show();
     await subscription.timeout.future;
     RelayPool.shared.unsubscribe(subscription.id);
-    if (mounted) context.loaderOverlay.hide();
     
     String proofEvts = widget.prefs.getString('proofs') ?? '';
     if (proofEvts != '') {
@@ -419,12 +425,13 @@ class _WalletPage extends State<WalletPage> with CashuListener {
       await Cashu.shared.invoicePaid.future;
       if (dialogKey.currentContext != null) {
         Navigator.of(dialogKey.currentContext!).pop();
+        return;
       }
-    } else {
+    } else if (action == 'cashu') { 
       // ignore: use_build_context_synchronously
       context.loaderOverlay.show();
-      popUp.complete();
-    }
+    }  
+    popUp.complete();
   }
 
   _onSend () async {
