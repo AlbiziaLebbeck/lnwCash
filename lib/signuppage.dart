@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:loader_overlay/loader_overlay.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:lnwcash/walletpage.dart';
@@ -86,11 +87,13 @@ class _SignupFormState extends State<SignupForm> {
                 return 'Your name or AKA is required';
               }
 
+              context.loaderOverlay.show();
               keychain = Keychain.generate();
+              context.loaderOverlay.hide();
               widget.prefs.setString('loginType', 'nsec');
               widget.prefs.setString('priv', keychain.private);
               widget.prefs.setString('pub', keychain.public);
-              widget.prefs.setString('name', value);
+              widget.prefs.setString('profile', '{"name":"$value","display_name":"$value"}');
 
               return null;
             },

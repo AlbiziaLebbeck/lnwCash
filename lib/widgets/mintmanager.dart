@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lnwcash/main.dart';
 import 'package:lnwcash/utils/cashu.dart';
+import 'package:loader_overlay/loader_overlay.dart';
 
 Future<void> mintManager(context) async {
   return showModalBottomSheet(context: context, 
@@ -25,6 +27,7 @@ class _MintManager extends State<MintManager>{
   @override
   void initState() {
     super.initState();
+    _mintController.text = "https://";
   }
 
   @override
@@ -56,7 +59,6 @@ class _MintManager extends State<MintManager>{
               children: [
                 TextFormField(
                   controller: _mintController,
-                  // initialValue: "https://",
                   decoration: InputDecoration(
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(25),
@@ -81,7 +83,13 @@ class _MintManager extends State<MintManager>{
                   ),
                   validator: (value) { 
                     if (value == null || value.isEmpty || value == 'https://') {
+                      _mintController.text = "https://";
                       return "Mint url is required";
+                    }
+
+                    if (!value.startsWith('https://')) {
+                      _mintController.text = "https://";
+                      return "Mint url is invalid";
                     }
 
                     if (Cashu.shared.mints.where((e) => e.mintURL == value).isNotEmpty) {
@@ -101,7 +109,10 @@ class _MintManager extends State<MintManager>{
                   onPressed: () async {
                     if(_mintKey.currentState!.validate()) {
                       if (addingMint != null) {
+                        context.loaderOverlay.show();
                         bool isAdded = await Cashu.shared.addMint(addingMint!);
+                        // ignore: use_build_context_synchronously
+                        context.loaderOverlay.hide();
                         if (isAdded) {
                           setState(() {});
                         } else {

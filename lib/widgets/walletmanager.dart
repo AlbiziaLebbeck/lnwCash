@@ -110,6 +110,16 @@ class _WalletManager extends State<WalletManager>{
                     const Expanded(child: SizedBox()),
                     IconButton(
                       onPressed: () async {
+                        if (Nip60.shared.wallets.length <= 1) {
+                          showDialog(context: context,
+                            builder: (context) => const AlertDialog(
+                              title: Text('Warning!'),
+                              content: Text('You need at least one wallet'),
+                            )
+                          );
+                          return;
+                        }
+
                         showDialog(context: context,
                           builder: (context) => AlertDialog(
                             title: Text('Delete "${Nip60.shared.wallets[index]['name']}"'),
@@ -149,7 +159,7 @@ class _WalletManager extends State<WalletManager>{
             )
           ),
           const SizedBox(height: 15),
-          TextButton(child: const Text("Done", style: TextStyle(fontSize: 16)),
+          TextButton(child: const Text("Select", style: TextStyle(fontSize: 16)),
             onPressed: () async {
               if (Nip60.shared.wallets.isEmpty) {
                 showDialog(context: context,

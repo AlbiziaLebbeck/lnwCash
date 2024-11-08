@@ -25,6 +25,7 @@ import 'package:lnwcash/widgets/transactionview.dart';
 import 'package:lnwcash/widgets/mintcard.dart';
 import 'package:lnwcash/widgets/receivebottom.dart';
 import 'package:lnwcash/widgets/sendbottom.dart';
+import 'package:lnwcash/widgets/sidebar.dart';
 
 import 'package:lnwcash/widgets/relaymanager.dart';
 import 'package:lnwcash/widgets/walletmanager.dart';
@@ -61,7 +62,6 @@ class _WalletPage extends State<WalletPage> with CashuListener {
 
     pub = widget.prefs.getString('pub') ?? '';
     priv = widget.prefs.getString('priv') ?? '';
-    name = widget.prefs.getString('name') ?? '';
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await Signer.shared.initialize(priv);
@@ -87,17 +87,8 @@ class _WalletPage extends State<WalletPage> with CashuListener {
 
     widget.prefs.setStringList('relays', RelayPool.shared.getRelayURL());
 
-    // ignore: use_build_context_synchronously
-    context.loaderOverlay.show();
     await _fetchWalletEvent();
-    await _mintSetup();
-    await _fetchProofEvent();
-    // ignore: use_build_context_synchronously
-    context.loaderOverlay.hide();
-    _fetchHistoryEvent();
     
-    widget.prefs.setString('wallet', jsonEncode(Nip60.shared.wallet));
-    Nip60.shared.updateWallet();
     Cashu.shared.initialize();
   }
 
@@ -122,7 +113,7 @@ class _WalletPage extends State<WalletPage> with CashuListener {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 5,),
-              ProfileCard(pub, name: name),
+              ProfileCard(prefs: widget.prefs,),
               const SizedBox(height: 25,),
               FadeIn(
                 child: Center(
@@ -213,12 +204,16 @@ class _WalletPage extends State<WalletPage> with CashuListener {
           ),
         ),
       ),
+      drawer: getDrawer(context, 
+        prefs:  widget.prefs,
+        fetchWalletEvent: _fetchWalletEvent,
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           boxShadow: [
             BoxShadow(color: Theme.of(context).colorScheme.primary, spreadRadius: 0, blurRadius: 8),
           ],
-        ), 
+        ),
         child: BottomNavigationBar(
           showSelectedLabels: false,
           showUnselectedLabels: false,
@@ -318,46 +313,69 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     _callSnackBar(context, errorMsg);
   }
 
-  Future<void> _fetchWalletEvent() async {
-    String walletStr = widget.prefs.getString('wallet') ?? '';
-    if (walletStr != '') {
-      setState(() {
-        Nip60.shared.wallet = Map.castFrom(jsonDecode(walletStr));
-      });
+  Future<void> _fetchWalletEvent({bool isInit = true}) async {
+    context.loaderOverlay.show();
+    
+    if (isInit) {
+      String walletStr = widget.prefs.getString('wallet') ?? '';
+      if (walletStr != '') {
+        setState(() {
+          Nip60.shared.wallet = Map.castFrom(jsonDecode(walletStr));
+        });
+      }
+    } else {
+      Nip60.shared.wallet.clear();
     }
 
     Subscription subscription = Nip60.shared.fetchWalletEvent();
     await subscription.timeout.future;
     RelayPool.shared.unsubscribe(subscription.id);
+    // ignore: use_build_context_synchronously
+    context.loaderOverlay.hide();
     
-    if (Nip60.shared.wallet.isEmpty) {
-      // ignore: use_build_context_synchronously
-      context.loaderOverlay.hide();
+    if (Nip60.shared.wallet.isEmpty || !isInit) {
       // ignore: use_build_context_synchronously
       await walletManager(context);
-      // ignore: use_build_context_synchronously
-      context.loaderOverlay.show();
     }
     
     setState(() {
       balance = num.parse(Nip60.shared.wallet['balance']!);
     });
+
+    await _mintSetup(isInit: isInit);
   }
 
-  Future<void> _mintSetup() async {
+  Future<void> _mintSetup({bool isInit = true}) async {
+    Cashu.shared.mints.clear();
+    Cashu.shared.proofs.clear();
+    Cashu.shared.keysets.clear();
     final dynamic mints = jsonDecode(Nip60.shared.wallet['mints']!);
     if (mints.isEmpty) {
       await Cashu.shared.addMint('https://mint.lnw.cash');
       // ignore: use_build_context_synchronously
       await mintManager(context);
     } else {
+      context.loaderOverlay.show();
       await Cashu.shared.setupMints(mints);
+      // ignore: use_build_context_synchronously
+      context.loaderOverlay.hide();
     }
 
     Nip60.shared.wallet['mints'] =  jsonEncode(Cashu.shared.mints.map((m) => m.mintURL).toList());
+
+    // ignore: use_build_context_synchronously
+    context.loaderOverlay.hide();
+
+    await _fetchProofEvent(isInit: isInit);
   }
 
-  Future<void> _fetchProofEvent() async { 
+  Future<void> _fetchProofEvent({bool isInit = true}) async {
+
+    if (!isInit) {
+      widget.prefs.setString('proofs', '');
+    }
+
+    context.loaderOverlay.show();
     Subscription subscription = Nip60.shared.fetchProofEvent();
     await subscription.timeout.future;
     RelayPool.shared.unsubscribe(subscription.id);
@@ -376,6 +394,9 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     widget.prefs.setString('proofs', jsonEncode(Nip60.shared.proofEvents));
     await Nip60.shared.eventToProof();
 
+    // ignore: use_build_context_synchronously
+    context.loaderOverlay.hide();
+
     setState(() {
       balance = 0;
       for (IMint mint in Cashu.shared.mints) {
@@ -383,6 +404,11 @@ class _WalletPage extends State<WalletPage> with CashuListener {
       }
       Nip60.shared.wallet['balance'] = balance.toString();
     });
+    
+    widget.prefs.setString('wallet', jsonEncode(Nip60.shared.wallet));
+    Nip60.shared.updateWallet();
+
+    _fetchHistoryEvent();
   }
 
   Future<void> _fetchHistoryEvent() async {

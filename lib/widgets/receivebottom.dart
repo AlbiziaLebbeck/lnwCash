@@ -107,18 +107,11 @@ class _ReceiveButtomSheet extends State<ReceiveButtomSheet> {
                           IconButton(
                             onPressed: () async {
                               showDialog(context: context,
-                                builder: (context) => AlertDialog(
-                                  content: SizedBox(
-                                    width: 320.0,
-                                    height: 320.0,
-                                    child: QRCodeReaderSquareWidget(
-                                      onDetect: (QRCodeCapture capture) {
-                                        _ecashController.text = capture.raw;
-                                        Navigator.of(context).pop();
-                                      },
-                                      size: 320,
-                                    ),
-                                  ),
+                                builder: (context) => QRCodeReaderTransparentWidget(
+                                  onDetect: (QRCodeCapture capture) {
+                                    _ecashController.text = capture.raw;
+                                    Navigator.of(context).pop();
+                                  },
                                 ),
                               );
                             },

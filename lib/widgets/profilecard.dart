@@ -6,24 +6,33 @@ import 'package:nostr_core_dart/nostr.dart';
 
 import 'package:lnwcash/widgets/avatar_image.dart';
 import 'package:lnwcash/utils/relay.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileCard extends StatefulWidget {
-  const ProfileCard(this._pub, {super.key, this.name = ''});
+  const ProfileCard({super.key, required this.prefs});
 
-  final String _pub;
-  final String name;
+  final SharedPreferences prefs;
 
   @override
   State<StatefulWidget> createState() => _ProfileCard();
 }
 
 class _ProfileCard extends State<ProfileCard> {
+
+  String pub = '';
   String name = 'Name';
   String picture = 'assets/nopicAvatar.png';
 
   @override
   void initState() {
     super.initState();
+
+    pub = widget.prefs.getString('pub') ?? '';
+    final profile = jsonDecode(widget.prefs.getString('profile') ?? '{}');
+    if (profile.isNotEmpty) {
+      name = profile['display_name'];
+      picture = profile['picture'];
+    } 
 
     _loadPreference();
   }
@@ -35,28 +44,29 @@ class _ProfileCard extends State<ProfileCard> {
     Subscription subscription = Subscription(
       filters: [Filter(
         kinds: [0],
-        authors: [widget._pub],
+        authors: [pub],
         limit: 10,
       )], 
       onEvent: (event) {
         hasProfile = true;
         dynamic content = jsonDecode(event['content']);
         setState(() {
-          name = content["name"];
+          name = content["display_name"];
           picture = content['picture'] ?? 'assets/nopicAvatar.png';
         });
+        widget.prefs.setString('profile', event['content']);
       }
     );
     RelayPool.shared.subscribe(subscription, timeout: 3);
     await subscription.timeout.future;
+    RelayPool.shared.unsubscribe(subscription.id);
     if (!hasProfile) {
       Event? event = await createEvent(
         kind: 0, 
         tags: [], 
-        content: '{"name":"${widget.name}"}',
+        content: '{"name":"$name","display_name":"$name"}',
       );
       RelayPool.shared.send(event!.serialize());
-      name = widget.name;
     }
   }
 
@@ -65,22 +75,26 @@ class _ProfileCard extends State<ProfileCard> {
     return Container(
       padding: const EdgeInsets.only(left: 15, right: 15),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.start,
         children: [
-          Expanded(child: 
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("Welcome", style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w300),),
-                const SizedBox(height: 3,),
-                Text(name, style: TextStyle(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.primary, fontSize: 18,)),
-              ],
+          GestureDetector(
+            onTap: () {
+              Scaffold.of(context).openDrawer();
+            },
+            child: AvatarImage(picture, 
+              width: 45, height: 45, 
+              radius: 15,
             )
           ),
-          AvatarImage(picture, 
-            width: 40, height: 40, 
-            radius: 10,
-          )
+          const SizedBox(width: 10,),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Welcome", style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w300),),
+              const SizedBox(height: 1,),
+              Text(name, style: TextStyle(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.primary, fontSize: 16,)),
+            ],
+          ),
         ],
       ),
     );
