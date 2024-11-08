@@ -48,7 +48,6 @@ Drawer getDrawer(BuildContext context, {
             Navigator.of(context).pop();
           },
         ),
-        const SizedBox(height: 10),
         ListTile(
           leading: const Icon(Icons.account_balance),
           title: const Text('Mints'),
@@ -57,7 +56,6 @@ Drawer getDrawer(BuildContext context, {
             mintManager(context);
           },
         ),
-        const SizedBox(height: 5),
         const Divider(),
         Container(
           padding: const EdgeInsets.only(left: 10, top: 5, bottom: 5),
@@ -72,18 +70,14 @@ Drawer getDrawer(BuildContext context, {
             relayManager(context);
           },
         ),
-        nsec != 'nsec1jlrw3c' ? Column(children: [ 
-          const SizedBox(height: 10),
-          ListTile(
-            leading: const Icon(Icons.key),
-            title: const Text('Nostr Keys'),
-            onTap: () {
-              // Update the state of the app.
-              // ...
-            },
-          ),]
+        nsec != 'nsec1jlrw3c' ? ListTile(
+          leading: const Icon(Icons.key),
+          title: const Text('Nostr Keys'),
+          onTap: () {
+            // Update the state of the app.
+            // ...
+          },
         ) : const SizedBox(),
-        const SizedBox(height: 5),
         const Divider(),
         Container(
           padding: const EdgeInsets.only(left: 10, top: 5, bottom: 5),
@@ -97,7 +91,6 @@ Drawer getDrawer(BuildContext context, {
             // ...
           },
         ),
-        const SizedBox(height: 5),
         const Divider(),
         Container(
           padding: const EdgeInsets.only(left: 10, top: 5, bottom: 5),
@@ -111,9 +104,7 @@ Drawer getDrawer(BuildContext context, {
             // ...
           },
         ),
-        const SizedBox(height: 5),
         const Divider(),
-        const SizedBox(height: 10),
       ],
     ),
   );
