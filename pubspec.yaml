@@ -50,6 +50,8 @@ dependencies:
   decimal: ^2.3.3
   
   qrcode_reader_web: ^1.1.1
+  flutter_settings_screens: ^0.3.4
+  provider: ^6.1.2
 
 dev_dependencies:
   flutter_test:

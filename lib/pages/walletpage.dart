@@ -363,9 +363,6 @@ class _WalletPage extends State<WalletPage> with CashuListener {
 
     Nip60.shared.wallet['mints'] =  jsonEncode(Cashu.shared.mints.map((m) => m.mintURL).toList());
 
-    // ignore: use_build_context_synchronously
-    context.loaderOverlay.hide();
-
     await _fetchProofEvent(isInit: isInit);
   }
 

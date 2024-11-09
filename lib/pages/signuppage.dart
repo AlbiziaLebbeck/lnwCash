@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:loader_overlay/loader_overlay.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:animate_do/animate_do.dart';
-import 'package:lnwcash/walletpage.dart';
+import 'package:lnwcash/pages/walletpage.dart';
 import 'package:nostr_core_dart/nostr.dart';
 
 class SignupPage extends StatelessWidget {
@@ -15,13 +15,14 @@ class SignupPage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(backgroundColor: Theme.of(context).colorScheme.surfaceContainer),
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
       body: Center(
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 42, vertical: 150),
           width: 500,
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainer,
-          ),
+          // decoration: BoxDecoration(
+          //   color: Theme.of(context).colorScheme.surfaceContainer,
+          // ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:lnwcash/pages/appearancepage.dart';
 import 'package:lnwcash/widgets/avatar_image.dart';
 import 'package:lnwcash/widgets/mintmanager.dart';
 import 'package:lnwcash/widgets/relaymanager.dart';
@@ -31,7 +32,7 @@ Drawer getDrawer(BuildContext context, {
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
               const SizedBox(width: 10,),
-              Icon(Icons.qr_code, color: Theme.of(context).colorScheme.inversePrimary,),
+              const Icon(Icons.qr_code),
             ],
           ),
           accountEmail: Text(nip05, style: const TextStyle(fontSize: 14),),
@@ -87,8 +88,10 @@ Drawer getDrawer(BuildContext context, {
           leading: const Icon(Icons.bubble_chart),
           title: const Text('Appearance'),
           onTap: () {
-            // Update the state of the app.
-            // ...
+            Navigator.of(context).pop();
+            Navigator.push(context,
+              MaterialPageRoute(builder: (context) => const AppearancePage()),
+            );
           },
         ),
         const Divider(),

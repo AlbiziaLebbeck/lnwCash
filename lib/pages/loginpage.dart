@@ -3,8 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:nostr_core_dart/nostr.dart';
-import 'package:lnwcash/signuppage.dart';
-import 'package:lnwcash/walletpage.dart';
+import 'package:lnwcash/pages/signuppage.dart';
+import 'package:lnwcash/pages/walletpage.dart';
 import 'package:lnwcash/utils/nip07.dart';
 
 class LoginPage extends StatelessWidget {
@@ -12,15 +12,15 @@ class LoginPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
       body: Center(
         child: Container(
           padding: EdgeInsets.only(left: 48, right: 48, top: 0.1*MediaQuery.sizeOf(context).height),
-          // width: 500,
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainer,
-          ),
+          width: 500,
+          // decoration: BoxDecoration(
+          //   color: Theme.of(context).colorScheme.surfaceContainer,
+          // ),
           child: Column(
             // mainAxisAlignment: MainAxisAlignment.center,
             children: [
