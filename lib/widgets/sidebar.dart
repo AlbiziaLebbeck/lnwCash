@@ -1,12 +1,16 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:lnwcash/pages/loginpage.dart';
+import 'package:lnwcash/pages/nostrkeyspage.dart';
+import 'package:nostr_core_dart/nostr.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+
 import 'package:lnwcash/pages/appearancepage.dart';
 import 'package:lnwcash/widgets/avatar_image.dart';
 import 'package:lnwcash/widgets/mintmanager.dart';
 import 'package:lnwcash/widgets/relaymanager.dart';
-import 'package:nostr_core_dart/nostr.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 Drawer getDrawer(BuildContext context, {
   required SharedPreferences prefs,
@@ -31,8 +35,8 @@ Drawer getDrawer(BuildContext context, {
               Text(name, 
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
-              const SizedBox(width: 10,),
-              const Icon(Icons.qr_code),
+              // const SizedBox(width: 10,),
+              // const Icon(Icons.qr_code),
             ],
           ),
           accountEmail: Text(nip05, style: const TextStyle(fontSize: 14),),
@@ -75,8 +79,10 @@ Drawer getDrawer(BuildContext context, {
           leading: const Icon(Icons.key),
           title: const Text('Nostr Keys'),
           onTap: () {
-            // Update the state of the app.
-            // ...
+            Navigator.of(context).pop();
+            Navigator.push(context,
+              MaterialPageRoute(builder: (context) => NostrKeyPage(nsec: nsec, npub: npub,)),
+            );
           },
         ) : const SizedBox(),
         const Divider(),
@@ -103,8 +109,24 @@ Drawer getDrawer(BuildContext context, {
           leading: const Icon(Icons.logout),
           title: const Text('Logout'),
           onTap: () {
-            // Update the state of the app.
-            // ...
+            showDialog(context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Logout'),
+                content: const Text('Please ensure your nsec is saved before you logout or you will lose access to this account again.'),
+                actions: [
+                  TextButton(onPressed: () {Navigator.of(context).pop();}, child: const Text('Cancel')),
+                  FilledButton(
+                    onPressed: () async {
+                      prefs.clear();
+                      Navigator.pushReplacement(context,
+                        MaterialPageRoute(builder: (context) => const LoginPage()),
+                      );
+                    }, 
+                    child: const Text('Logout')
+                  ),
+                ],
+              )
+            );
           },
         ),
         const Divider(),

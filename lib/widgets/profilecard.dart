@@ -30,8 +30,8 @@ class _ProfileCard extends State<ProfileCard> {
     pub = widget.prefs.getString('pub') ?? '';
     final profile = jsonDecode(widget.prefs.getString('profile') ?? '{}');
     if (profile.isNotEmpty) {
-      name = profile['display_name'];
-      picture = profile['picture'];
+      name = profile['display_name'] ?? profile['name'];
+      picture = profile['picture'] ?? 'assets/nopicAvatar.png';
     } 
 
     _loadPreference();
@@ -51,7 +51,7 @@ class _ProfileCard extends State<ProfileCard> {
         hasProfile = true;
         dynamic content = jsonDecode(event['content']);
         setState(() {
-          name = content["display_name"];
+          name = content["display_name"] ?? content["name"];
           picture = content['picture'] ?? 'assets/nopicAvatar.png';
         });
         widget.prefs.setString('profile', event['content']);
