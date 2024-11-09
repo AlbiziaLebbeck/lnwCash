@@ -250,7 +250,7 @@ class Nip60 {
     for(var id in Nip60.shared.proofEvents.keys) {
       final event = Nip60.shared.proofEvents[id];
       dynamic decryptMsg = jsonDecode((await Signer.shared.nip44Decrypt(event['content']))!);
-      IMint mint = Cashu.shared.getMint(decryptMsg['mint']);
+      IMint mint = Cashu.shared.getMint(decryptMsg['mint'])!;
       eventProofs[id] = [];
       for (var proof in decryptMsg['proofs']){
         if (Cashu.shared.proofs[mint]!.where((prf) => prf.secret == proof['secret']).isEmpty) {

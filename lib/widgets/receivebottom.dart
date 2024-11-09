@@ -184,7 +184,7 @@ class _ReceiveButtomSheet extends State<ReceiveButtomSheet> {
                       return "Amount should greater than 0"; 
                     }
                     
-                    IMint mint = Cashu.shared.getMint(currentMint);
+                    IMint mint = Cashu.shared.getMint(currentMint)!;
                     Cashu.shared.createLightningInvoice(mint: mint, amount: amount, context: context);
                     return null;
                   },
