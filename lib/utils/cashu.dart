@@ -71,8 +71,8 @@ class Cashu {
     }
   }
 
-  IMint? getMint(String mintURL) {
-    return mints.where((mint) => mint.mintURL == mintURL).firstOrNull;
+  IMint getMint(String mintURL) {
+    return mints.where((mint) => mint.mintURL == mintURL).first;
   }
 
   Future<Receipt> getLastestInvoice() async {
@@ -95,14 +95,13 @@ class Cashu {
     List<String> redeemPubkey = const [],
   }) async {
     for (var entry in token.entries) {
-
-      IMint? mint = getMint(entry.mint);
-      if (mint == null) {
+      
+      if (mints.where((mint) => mint.mintURL == entry.mint).isEmpty) {
         bool added = await addMint(entry.mint);
-        if (!added) return;
-
-        mint = getMint(entry.mint)!;
+        if (!added) continue;
       }
+      
+      IMint mint = getMint(entry.mint);
 
       final redeemProofs = [...entry.proofs];
       final newProofs = await swapProofs(
@@ -195,7 +194,7 @@ class Cashu {
     _pendingInvoices.add(invoice);
 
     final amount = int.tryParse(invoice.amount)!;
-    final mint = getMint(invoice.mintURL)!;
+    final mint = getMint(invoice.mintURL);
     
     final keysetInfo = keysets[mint]!.firstOrNull;
  
