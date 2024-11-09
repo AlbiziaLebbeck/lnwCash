@@ -103,14 +103,16 @@ class Cashu {
       
       IMint mint = getMint(entry.mint);
 
-      final redeemProofs = [...entry.proofs];
+      final currentProofs = [...proofs[mint]!];
       final newProofs = await swapProofs(
         mint: mint,
-        swapProofs: redeemProofs,
+        swapProofs: [...currentProofs, ...entry.proofs],
       );
       _updateProofs(newProofs!, mint);
-      final evtId = await Nip60.shared.createTokenEvent(newProofs, mint.mintURL);
-      await Nip60.shared.createHistoryEvent([evtId], []);
+      await Nip60.shared.rollOverTokenEvent(currentProofs, newProofs, mint.mintURL);
+      for (final proof in currentProofs) {
+        proofs[mint]!.remove(proof);
+      }
       notifyListenerForBalanceChanged(mint);
     }
   }

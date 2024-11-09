@@ -111,7 +111,7 @@ class _SendButtomSheet extends State<SendButtomSheet> {
                       return "Amount should greater than 0"; 
                     }
                     
-                    IMint mint = Cashu.shared.getMint(currentMint)!;
+                    IMint mint = Cashu.shared.getMint(currentMint);
                     if (amount > Cashu.shared.proofs[mint]!.totalAmount) {
                       return "Mint balance is insufficient";
                     }  
