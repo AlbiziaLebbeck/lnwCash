@@ -1,11 +1,11 @@
 {
-    "name": "lnwcash",
-    "short_name": "lnwcash",
+    "name": "lnwCash",
+    "short_name": "lnwCash",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#faebe0",
     "theme_color": "#faebe0",
-    "description": "A new Flutter project.",
+    "description": "lightning & nostr wallet for ecash",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

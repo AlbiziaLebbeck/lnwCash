@@ -1,20 +1,24 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:lnwcash/pages/loginpage.dart';
-import 'package:lnwcash/pages/nostrkeyspage.dart';
 import 'package:nostr_core_dart/nostr.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-
+import 'package:lnwcash/pages/loginpage.dart';
+import 'package:lnwcash/pages/nostrkeyspage.dart';
 import 'package:lnwcash/pages/appearancepage.dart';
+
 import 'package:lnwcash/widgets/avatar_image.dart';
 import 'package:lnwcash/widgets/mintmanager.dart';
 import 'package:lnwcash/widgets/relaymanager.dart';
 
+import 'package:lnwcash/utils/cashu.dart';
+import 'package:lnwcash/utils/nip60.dart';
+
 Drawer getDrawer(BuildContext context, {
   required SharedPreferences prefs,
   required Future<void> Function({bool isInit}) fetchWalletEvent,
+  required Future<void> Function({bool isInit}) fetchProofEvent,
 }) {
   final npub = Nip19.encodePubkey(prefs.getString('pub') ?? '').toString();
   final nsec = Nip19.encodePrivkey(prefs.getString('priv') ?? '').toString();
@@ -49,8 +53,8 @@ Drawer getDrawer(BuildContext context, {
           leading: const Icon(Icons.account_balance_wallet),
           title: const Text('Wallets'),
           onTap: () {
-            fetchWalletEvent(isInit: false);
             Navigator.of(context).pop();
+            fetchWalletEvent(isInit: false);
           },
         ),
         ListTile(
@@ -58,7 +62,10 @@ Drawer getDrawer(BuildContext context, {
           title: const Text('Mints'),
           onTap: () {
             Navigator.of(context).pop();
-            mintManager(context);
+            mintManager(context).then((_) {
+              Nip60.shared.wallet['mints'] =  jsonEncode(Cashu.shared.mints.map((m) => m.mintURL).toList());
+              fetchProofEvent(isInit: false);
+            });
           },
         ),
         const Divider(),

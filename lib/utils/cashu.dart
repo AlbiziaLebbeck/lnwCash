@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:bolt11_decoder/bolt11_decoder.dart';
 
@@ -99,6 +100,7 @@ class Cashu {
       if (mints.where((mint) => mint.mintURL == entry.mint).isEmpty) {
         bool added = await addMint(entry.mint);
         if (!added) continue;
+        Nip60.shared.wallet['mints'] =  jsonEncode(mints.map((m) => m.mintURL).toList());
       }
       
       IMint mint = getMint(entry.mint);

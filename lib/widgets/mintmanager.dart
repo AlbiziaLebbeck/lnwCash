@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:lnwcash/main.dart';
 import 'package:lnwcash/utils/cashu.dart';
 import 'package:loader_overlay/loader_overlay.dart';
 

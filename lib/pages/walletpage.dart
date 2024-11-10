@@ -167,12 +167,10 @@ class _WalletPage extends State<WalletPage> with CashuListener {
                     Text("Mints", style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600),),
                     IconButton(
                       onPressed: () async {
-                        await mintManager(context);
-                        setState(() {});
-                        Nip60.shared.wallet['mints'] =  jsonEncode(Cashu.shared.mints.map((m) => m.mintURL).toList());
-                        widget.prefs.setString('wallet', jsonEncode(Nip60.shared.wallet));
-                        Nip60.shared.updateWallet();
-                        setState(() {});
+                        mintManager(context).then((_) {
+                          Nip60.shared.wallet['mints'] =  jsonEncode(Cashu.shared.mints.map((m) => m.mintURL).toList());
+                          _fetchProofEvent(isInit: false);  
+                        });
                       },
                       iconSize: 27,
                       icon: Icon(Icons.add_circle_outline, 
@@ -207,6 +205,7 @@ class _WalletPage extends State<WalletPage> with CashuListener {
       drawer: getDrawer(context, 
         prefs:  widget.prefs,
         fetchWalletEvent: _fetchWalletEvent,
+        fetchProofEvent: _fetchProofEvent,
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -342,7 +341,7 @@ class _WalletPage extends State<WalletPage> with CashuListener {
       balance = num.parse(Nip60.shared.wallet['balance']!);
     });
 
-    await _mintSetup(isInit: isInit);
+    _mintSetup(isInit: isInit);
   }
 
   Future<void> _mintSetup({bool isInit = true}) async {
@@ -360,10 +359,8 @@ class _WalletPage extends State<WalletPage> with CashuListener {
       // ignore: use_build_context_synchronously
       context.loaderOverlay.hide();
     }
-
     Nip60.shared.wallet['mints'] =  jsonEncode(Cashu.shared.mints.map((m) => m.mintURL).toList());
-
-    await _fetchProofEvent(isInit: isInit);
+    _fetchProofEvent(isInit: isInit);
   }
 
   Future<void> _fetchProofEvent({bool isInit = true}) async {
