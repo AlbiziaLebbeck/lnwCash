@@ -19,6 +19,7 @@ Drawer getDrawer(BuildContext context, {
   required SharedPreferences prefs,
   required Future<void> Function({bool isInit}) fetchWalletEvent,
   required Future<void> Function({bool isInit}) fetchProofEvent,
+  required version,
 }) {
   final npub = Nip19.encodePubkey(prefs.getString('pub') ?? '').toString();
   final nsec = Nip19.encodePrivkey(prefs.getString('priv') ?? '').toString();
@@ -137,6 +138,10 @@ Drawer getDrawer(BuildContext context, {
           },
         ),
         const Divider(),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 15),
+          child: Text('lnwCash v$version-alpha', style: const TextStyle(fontSize: 14)),
+        ),
       ],
     ),
   );
