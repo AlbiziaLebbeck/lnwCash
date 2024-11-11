@@ -6,7 +6,7 @@ import 'package:nostr_core_dart/nostr.dart';
 
 getTransactionHistory(context){
   return Container(
-    height: MediaQuery.of(context).size.height - 621,
+    height: MediaQuery.of(context).size.height - 530, //621
     padding: const EdgeInsets.only(left: 15, right: 15),
     child: ListView(
       scrollDirection: Axis.vertical,

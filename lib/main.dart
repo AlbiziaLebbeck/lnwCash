@@ -24,7 +24,7 @@ class MyApp extends StatelessWidget {
           return GlobalLoaderOverlay(
             child: MaterialApp(
               debugShowCheckedModeBanner: false,
-              title: 'lnw.Cash',
+              title: 'lnwCash',
               theme: ThemeData(
                 colorSchemeSeed: themeNotifier.colorScheme,
                 useMaterial3: true,

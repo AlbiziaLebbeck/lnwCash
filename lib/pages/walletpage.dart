@@ -207,39 +207,39 @@ class _WalletPage extends State<WalletPage> with CashuListener {
         fetchWalletEvent: _fetchWalletEvent,
         fetchProofEvent: _fetchProofEvent,
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(color: Theme.of(context).colorScheme.primary, spreadRadius: 0, blurRadius: 8),
-          ],
-        ),
-        child: BottomNavigationBar(
-          showSelectedLabels: false,
-          showUnselectedLabels: false,
-          backgroundColor: Theme.of(context).colorScheme.onPrimary,
-          selectedItemColor: Theme.of(context).colorScheme.primary,
-          unselectedItemColor: Theme.of(context).colorScheme.secondary,
-          currentIndex: 0,
-          type: BottomNavigationBarType.fixed,
-          elevation: 0,
-          items: const <BottomNavigationBarItem>[
-            BottomNavigationBarItem(
-              icon: Icon(
-                IconlyLight.home,
-                size: 25,
-              ),
-              label: '',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(
-                IconlyLight.chat,
-                size: 25,
-              ),
-              label: '',
-            ),
-          ]
-        ),
-      ),
+      // bottomNavigationBar: Container(
+      //   decoration: BoxDecoration(
+      //     boxShadow: [
+      //       BoxShadow(color: Theme.of(context).colorScheme.primary, spreadRadius: 0, blurRadius: 8),
+      //     ],
+      //   ),
+      //   child: BottomNavigationBar(
+      //     showSelectedLabels: false,
+      //     showUnselectedLabels: false,
+      //     backgroundColor: Theme.of(context).colorScheme.onPrimary,
+      //     selectedItemColor: Theme.of(context).colorScheme.primary,
+      //     unselectedItemColor: Theme.of(context).colorScheme.secondary,
+      //     currentIndex: 0,
+      //     type: BottomNavigationBarType.fixed,
+      //     elevation: 0,
+      //     items: const <BottomNavigationBarItem>[
+      //       BottomNavigationBarItem(
+      //         icon: Icon(
+      //           IconlyLight.home,
+      //           size: 25,
+      //         ),
+      //         label: '',
+      //       ),
+      //       BottomNavigationBarItem(
+      //         icon: Icon(
+      //           IconlyLight.chat,
+      //           size: 25,
+      //         ),
+      //         label: '',
+      //       ),
+      //     ]
+      //   ),
+      // ),
     );
   }
 
@@ -368,28 +368,30 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     if (!isInit) {
       widget.prefs.setString('proofs', '');
     }
-
-    context.loaderOverlay.show();
-    Subscription subscription = Nip60.shared.fetchProofEvent();
-    await subscription.timeout.future;
-    RelayPool.shared.unsubscribe(subscription.id);
     
+    // Get proof event from  local storage
     String proofEvts = widget.prefs.getString('proofs') ?? '';
     if (proofEvts != '') {
       for (var id in jsonDecode(proofEvts).keys) {
         final evt = jsonDecode(proofEvts)[id];
-        if(!Nip60.shared.proofEvents.containsKey(id)) { //resend event again
-          RelayPool.shared.send('["EVENT",${jsonEncode(evt)}]');
-        }
+        // if(!Nip60.shared.proofEvents.containsKey(id)) { //send proof event to relays if it is not get from relays 
+        //   RelayPool.shared.send('["EVENT",${jsonEncode(evt)}]');
+        // }
         Nip60.shared.proofEvents[id] = evt;
       }
     }
-    
-    widget.prefs.setString('proofs', jsonEncode(Nip60.shared.proofEvents));
-    await Nip60.shared.eventToProof();
 
+    // Get proof event from relays 
+    context.loaderOverlay.show();
+    Subscription subscription = Nip60.shared.fetchProofEvent();
+    await subscription.timeout.future;
+    RelayPool.shared.unsubscribe(subscription.id);
     // ignore: use_build_context_synchronously
     context.loaderOverlay.hide();
+    
+    //update all proof events to local storage
+    widget.prefs.setString('proofs', jsonEncode(Nip60.shared.proofEvents));
+    await Nip60.shared.eventToProof();
 
     setState(() {
       balance = 0;
@@ -412,13 +414,27 @@ class _WalletPage extends State<WalletPage> with CashuListener {
         Nip60.shared.histories.add(Map.castFrom(hist));
       }
     }
-    setState(() {});
 
     Subscription subscription = Nip60.shared.fetchHistoryEvent();
     await subscription.timeout.future;
     RelayPool.shared.unsubscribe(subscription.id);
     widget.prefs.setString('history', jsonEncode(Nip60.shared.histories));
-    setState(() {});
+
+    for (final hist in Nip60.shared.histories) {
+      for (final evtId in jsonDecode(hist['deleted']!)) {
+        if (Nip60.shared.proofEvents.containsKey(evtId)) {
+          Nip60.shared.deleteTokenEvent(evtId);
+        }
+      }
+    } 
+
+    setState(() {
+      balance = 0;
+      for (IMint mint in Cashu.shared.mints) {
+        balance += Cashu.shared.proofs[mint]!.totalAmount;
+      }
+      Nip60.shared.wallet['balance'] = balance.toString();
+    });
   }
 
   _onReceive () async {
