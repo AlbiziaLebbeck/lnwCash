@@ -38,13 +38,19 @@ Drawer getDrawer(BuildContext context, {
           accountName: Row(
             children: [
               Text(name, 
-                style: const TextStyle(fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onPrimary,
+                  fontWeight: FontWeight.w600
+                ),
               ),
               // const SizedBox(width: 10,),
               // const Icon(Icons.qr_code),
             ],
           ),
-          accountEmail: Text(nip05, style: const TextStyle(fontSize: 14),),
+          accountEmail: Text(nip05, style: TextStyle(
+            color: Theme.of(context).colorScheme.onPrimary,
+            fontSize: 14),
+          ),
         ),
         Container(
           padding: const EdgeInsets.only(left: 10, top: 5, bottom: 5),

@@ -44,7 +44,7 @@ class WalletPage extends StatefulWidget {
 class _WalletPage extends State<WalletPage> with CashuListener {
 
   
-  String version = '0.0.5';
+  String version = '0.0.7';
 
   late final String pub;
   late final String priv;
@@ -408,10 +408,15 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     widget.prefs.setString('wallet', jsonEncode(Nip60.shared.wallet));
     Nip60.shared.updateWallet();
 
-    _fetchHistoryEvent();
+    _fetchHistoryEvent(isInit: isInit);
   }
 
-  Future<void> _fetchHistoryEvent() async {
+  Future<void> _fetchHistoryEvent({bool isInit = true}) async {
+    if (!isInit) {
+      widget.prefs.setString('history', '');
+    }
+
+    Nip60.shared.histories.clear();
     String history = widget.prefs.getString('history') ?? '';
     if (history != '') { 
       for (var hist in jsonDecode(history)) {
@@ -571,6 +576,14 @@ class _WalletPage extends State<WalletPage> with CashuListener {
               data: data,
               version: QrVersions.auto,
               size: 200.0,
+              eyeStyle: QrEyeStyle(
+                eyeShape: QrEyeShape.square,
+                color: Theme.of(context).colorScheme.onSurface
+              ),
+              dataModuleStyle: QrDataModuleStyle(
+                dataModuleShape: QrDataModuleShape.square,
+                color: Theme.of(context).colorScheme.onSurface
+              ),
             ),
           ),
           actions: [

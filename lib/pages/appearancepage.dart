@@ -26,6 +26,7 @@ class AppearancePage extends StatelessWidget {
                     title: 'Dark Mode',
                     enabledLabel: 'Enabled',
                     disabledLabel: 'Disabled',
+                    activeColor: Theme.of(context).colorScheme.onPrimary,
                     onChange: (value) {
                       themeNotifier.isDark = value;
                     },
