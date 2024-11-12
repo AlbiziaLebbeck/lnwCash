@@ -3,7 +3,6 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:animate_do/animate_do.dart';
@@ -45,7 +44,7 @@ class WalletPage extends StatefulWidget {
 class _WalletPage extends State<WalletPage> with CashuListener {
 
   
-  String version = '';
+  String version = '0.0.5';
 
   late final String pub;
   late final String priv;
@@ -63,10 +62,6 @@ class _WalletPage extends State<WalletPage> with CashuListener {
   @override
   void initState() {
     super.initState();
-
-    PackageInfo.fromPlatform().then((value) {
-      version = value.version;
-    });
 
     pub = widget.prefs.getString('pub') ?? '';
     priv = widget.prefs.getString('priv') ?? '';

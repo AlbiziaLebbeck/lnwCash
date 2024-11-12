@@ -19,7 +19,7 @@ Drawer getDrawer(BuildContext context, {
   required SharedPreferences prefs,
   required Future<void> Function({bool isInit}) fetchWalletEvent,
   required Future<void> Function({bool isInit}) fetchProofEvent,
-  required version,
+  required String version,
 }) {
   final npub = Nip19.encodePubkey(prefs.getString('pub') ?? '').toString();
   final nsec = Nip19.encodePrivkey(prefs.getString('priv') ?? '').toString();
@@ -27,7 +27,7 @@ Drawer getDrawer(BuildContext context, {
   final profile = jsonDecode(prefs.getString('profile') ?? '{}');
   final name = profile['display_name'] ?? 'Name';
   final nip05 = profile['nip05'] ?? '';
-  final picture = profile['picture'] ?? 'assets/nopicAvatar.png';
+  final picture = profile['picture'] ?? 'images/nopicAvatar.png';
 
   return Drawer(
     child: ListView(

@@ -21,7 +21,7 @@ class _ProfileCard extends State<ProfileCard> {
 
   String pub = '';
   String name = 'Name';
-  String picture = 'assets/nopicAvatar.png';
+  String picture = 'images/nopicAvatar.png';
 
   @override
   void initState() {
@@ -31,7 +31,7 @@ class _ProfileCard extends State<ProfileCard> {
     final profile = jsonDecode(widget.prefs.getString('profile') ?? '{}');
     if (profile.isNotEmpty) {
       name = profile['display_name'] ?? profile['name'];
-      picture = profile['picture'] ?? 'assets/nopicAvatar.png';
+      picture = profile['picture'] ?? 'images/nopicAvatar.png';
     } 
 
     _loadPreference();
@@ -52,7 +52,7 @@ class _ProfileCard extends State<ProfileCard> {
         dynamic content = jsonDecode(event['content']);
         setState(() {
           name = content["display_name"] ?? content["name"];
-          picture = content['picture'] ?? 'assets/nopicAvatar.png';
+          picture = content['picture'] ?? 'images/nopicAvatar.png';
         });
         widget.prefs.setString('profile', event['content']);
       }

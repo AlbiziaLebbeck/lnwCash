@@ -26,7 +26,7 @@ class AvatarImage extends StatelessWidget {
             offset: const Offset(1, 1), // changes position of shadow
           ),
         ],
-        image: DecorationImage(image: NetworkImage(name), fit: BoxFit.cover),
+        image: DecorationImage(image: name.startsWith('http') ? NetworkImage(name) : AssetImage(name), fit: BoxFit.cover),
       ),
     );
   }
