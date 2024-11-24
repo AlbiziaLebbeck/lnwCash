@@ -1,5 +1,3 @@
-
-import 'history_entry.dart';
 import 'invoice.dart';
 import 'mint_model.dart';
 

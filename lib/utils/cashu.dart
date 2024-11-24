@@ -53,12 +53,13 @@ class Cashu {
 
   Future<bool> addMint(String mintURL) async {
     final maxNutsVersion = await MintHelper.getMaxNutsVersion(mintURL);
+    if (maxNutsVersion <= 0) return false;
     
     IMint mint = IMint(mintURL: mintURL, maxNutsVersion: maxNutsVersion);
     final response = await mint.requestMintInfoAction(mintURL: mint.mintURL);
     if (!response.isSuccess) return false;
     mint.info = response.data;
-    if (mint.name.isEmpty)  mint.name = response.data.name;
+    if (mint.name.isEmpty) mint.name = response.data.name;
     
     mints.add(mint);
     keysets[mint] = await MintHelper.fetchKeysetFromRemote(mint);
@@ -252,11 +253,18 @@ class Cashu {
     final change = <Proof>[];
 
     if (usedProofs.totalAmount > amount) {
-      final swapedProof = await swapProofs(
-        mint: mint, 
-        swapProofs: usedProofs,
-        supportAmount: amount,
-      );  
+      late final List<Proof>? swapedProof;
+      try {
+        swapedProof = await swapProofs(
+          mint: mint, 
+          swapProofs: usedProofs,
+          supportAmount: amount,
+        ); 
+      } catch (_) {
+        notifyError('Error: Mint is disconnected');
+        return;
+      }
+
       for (final proof in swapedProof!) {
         if (sendingProofs.totalAmount < amount) {
           sendingProofs.add(proof);
@@ -268,15 +276,6 @@ class Cashu {
       sendingProofs.addAll([...usedProofs]);
     }
 
-    final ecash = Nut0.encodedToken(
-      Token(
-        entries: [TokenEntry(mint: mint.mintURL, proofs: sendingProofs)],
-        unit: "sat",
-      ),
-    );
-    _ecashToken.add(ecash);
-    _ecashCreated.complete();
-
     if (change.isNotEmpty) {
       _updateProofs(change, mint);
     }
@@ -285,6 +284,15 @@ class Cashu {
     for (final proof in usedProofs) {
       proofs[mint]!.remove(proof);
     }
+
+    final ecash = Nut0.encodedToken(
+      Token(
+        entries: [TokenEntry(mint: mint.mintURL, proofs: sendingProofs)],
+        unit: "sat",
+      ),
+    );
+    _ecashToken.add(ecash);
+    _ecashCreated.complete();
 
     notifyListenerForBalanceChanged(mint);
   }

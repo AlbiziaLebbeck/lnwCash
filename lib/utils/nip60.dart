@@ -218,9 +218,8 @@ class Nip60 {
 
     if (unspendProofs.isNotEmpty) evtIds.add(await createTokenEvent(unspendProofs, mintUrl));
     if (outProofs.isNotEmpty) evtIds.add(await createTokenEvent(outProofs, mintUrl));
-
+    
     await createHistoryEvent(evtIds, rolloverEvent);
-    await deleteTokenEvent(rolloverEvent);
   }
 
   Subscription fetchProofEvent() {
@@ -292,6 +291,8 @@ class Nip60 {
       content.add(["direction", "out"]);
       content.add(["amount", "${-amount}", "sat"]);
     }
+
+    await deleteTokenEvent(destroyedEvt);
 
     String? encryptedContent = await Signer.shared.nip44Encrypt(jsonEncode(content));
 

@@ -198,7 +198,7 @@ class _LoginFormState extends State<LoginForm> {
           const SizedBox(height: 15,),
           TextButton(
               style: FilledButton.styleFrom(
-                fixedSize: const Size(150, 45),
+                fixedSize: const Size(200, 45),
               ),
               onPressed: () => {
                 Navigator.push(
@@ -206,7 +206,7 @@ class _LoginFormState extends State<LoginForm> {
                   MaterialPageRoute(builder: (context) => SignupPage(prefs: prefs,)),
                 )
               }, 
-              child: const Text("Sign Up", style: TextStyle(fontSize: 16))
+              child: const Text("Create New Account", style: TextStyle(fontSize: 16))
             )
         ],
       )
