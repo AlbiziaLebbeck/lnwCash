@@ -132,6 +132,11 @@ Drawer getDrawer(BuildContext context, {
                   FilledButton(
                     onPressed: () async {
                       prefs.clear();
+                      Nip60.shared.wallet.clear();
+                      Nip60.shared.proofEvents.clear();
+                      Nip60.shared.eventProofs.clear();
+                      Nip60.shared.histories.clear();
+                      Cashu.shared.mints.clear();
                       Navigator.pushReplacement(context,
                         MaterialPageRoute(builder: (context) => const LoginPage()),
                       );

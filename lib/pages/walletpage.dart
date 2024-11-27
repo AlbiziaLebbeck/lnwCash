@@ -318,7 +318,8 @@ class _WalletPage extends State<WalletPage> with CashuListener {
 
   Future<void> _fetchWalletEvent({bool isInit = true}) async {
     context.loaderOverlay.show();
-    
+    Nip60.shared.wallet.clear();
+
     if (isInit) {
       String walletStr = widget.prefs.getString('wallet') ?? '';
       if (walletStr != '') {
@@ -326,8 +327,6 @@ class _WalletPage extends State<WalletPage> with CashuListener {
           Nip60.shared.wallet = Map.castFrom(jsonDecode(walletStr));
         });
       }
-    } else {
-      Nip60.shared.wallet.clear();
     }
 
     Subscription subscription = Nip60.shared.fetchWalletEvent();
@@ -432,7 +431,7 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     for (final hist in Nip60.shared.histories) {
       for (final evtId in jsonDecode(hist['deleted']!)) {
         if (Nip60.shared.proofEvents.containsKey(evtId)) {
-          Nip60.shared.deleteTokenEvent(evtId);
+          await Nip60.shared.deleteTokenEvent([evtId]);
         }
       }
     } 

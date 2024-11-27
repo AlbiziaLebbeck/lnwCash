@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:lnwcash/utils/nip01.dart';
+import 'package:lnwcash/utils/relay.dart';
 import 'package:loader_overlay/loader_overlay.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:animate_do/animate_do.dart';
@@ -105,10 +107,20 @@ class _SignupFormState extends State<SignupForm> {
               backgroundColor: Theme.of(context).colorScheme.primaryFixedDim,
               minimumSize: const Size(double.infinity, 55),
             ),
-            onPressed: () {
+            onPressed: () async{
               // Validate returns true if the form is valid, or false otherwise.
               if (_formKey.currentState!.validate()) {
+                var profile = widget.prefs.getString('profile') ?? '{}';
+                Event? event = await createEvent(
+                  kind: 0, 
+                  tags: [], 
+                  content: profile,
+                  pub: widget.prefs.getString('pub'),
+                  priv: widget.prefs.getString('priv'),
+                );
+                RelayPool.shared.send(event!.serialize());
                 Navigator.pushReplacement(
+                  // ignore: use_build_context_synchronously
                   context,
                   MaterialPageRoute(builder: (context) => WalletPage(prefs: widget.prefs,)),
                 );

@@ -54,6 +54,8 @@ Future<Event?> createEvent ({
   required int kind,
   required List<List<String>> tags,
   required String content,
+  String? priv, 
+  String? pub,
 }) async {
   Event event;
   if (!Signer.shared.isNip07) {
@@ -61,8 +63,8 @@ Future<Event?> createEvent ({
       kind: kind, 
       tags: tags, 
       content: content,
-      pubkey: Signer.shared.pub!,
-      privkey: Signer.shared.priv!,
+      pubkey: pub ?? Signer.shared.pub!,
+      privkey: priv ?? Signer.shared.priv!,
     );
   } else {
     if (!nip07Support()) return null;

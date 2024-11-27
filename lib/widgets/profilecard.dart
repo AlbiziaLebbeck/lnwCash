@@ -38,9 +38,6 @@ class _ProfileCard extends State<ProfileCard> {
   }
 
   void _loadPreference() async {
-    
-    bool hasProfile = false;
-
     Subscription subscription = Subscription(
       filters: [Filter(
         kinds: [0],
@@ -48,7 +45,6 @@ class _ProfileCard extends State<ProfileCard> {
         limit: 10,
       )], 
       onEvent: (event) {
-        hasProfile = true;
         dynamic content = jsonDecode(event['content']);
         setState(() {
           name = content["display_name"] ?? content["name"];
@@ -60,14 +56,6 @@ class _ProfileCard extends State<ProfileCard> {
     RelayPool.shared.subscribe(subscription, timeout: 3);
     await subscription.timeout.future;
     RelayPool.shared.unsubscribe(subscription.id);
-    if (!hasProfile) {
-      Event? event = await createEvent(
-        kind: 0, 
-        tags: [], 
-        content: '{"name":"$name","display_name":"$name"}',
-      );
-      RelayPool.shared.send(event!.serialize());
-    }
   }
 
   @override
