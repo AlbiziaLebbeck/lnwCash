@@ -223,7 +223,6 @@ class Nip60 {
   }
 
   Subscription fetchProofEvent() {
-    proofEvents.clear();
     Subscription subscription = Subscription( 
       filters: [Filter(
         kinds: [7375],

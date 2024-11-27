@@ -394,7 +394,6 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     
     //update all proof events to local storage
     widget.prefs.setString('proofs', jsonEncode(Nip60.shared.proofEvents));
-    await Nip60.shared.eventToProof();
 
     setState(() {
       balance = 0;
@@ -434,7 +433,8 @@ class _WalletPage extends State<WalletPage> with CashuListener {
           await Nip60.shared.deleteTokenEvent([evtId]);
         }
       }
-    } 
+    }
+    await Nip60.shared.eventToProof();
 
     setState(() {
       balance = 0;
