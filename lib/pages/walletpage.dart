@@ -363,6 +363,37 @@ class _WalletPage extends State<WalletPage> with CashuListener {
       context.loaderOverlay.hide();
     }
     Nip60.shared.wallet['mints'] =  jsonEncode(Cashu.shared.mints.map((m) => m.mintURL).toList());
+    _fetchHistoryEvent(isInit: isInit);
+  }
+
+  Future<void> _fetchHistoryEvent({bool isInit = true}) async {
+    if (!isInit) {
+      widget.prefs.setString('history', '');
+    }
+
+    Nip60.shared.histories.clear();
+
+    // Get history event from relays
+    context.loaderOverlay.show();
+    Subscription subscription = Nip60.shared.fetchHistoryEvent();
+    await subscription.timeout.future;
+    RelayPool.shared.unsubscribe(subscription.id);
+    // ignore: use_build_context_synchronously
+    context.loaderOverlay.hide();
+
+    // Get history event from local storage
+    String history = widget.prefs.getString('history') ?? '';
+    if (history != '') { 
+      for (var hist in jsonDecode(history)) {
+        if (Nip60.shared.histories.where((e) => e['id'] == hist['id']).isEmpty) {
+          Nip60.shared.histories.add(Map.castFrom(hist));
+        }
+      }
+    }
+
+    widget.prefs.setString('history', jsonEncode(Nip60.shared.histories));
+
+    setState(() {});
     _fetchProofEvent(isInit: isInit);
   }
 
@@ -370,18 +401,6 @@ class _WalletPage extends State<WalletPage> with CashuListener {
 
     if (!isInit) {
       widget.prefs.setString('proofs', '');
-    }
-    
-    // Get proof event from  local storage
-    String proofEvts = widget.prefs.getString('proofs') ?? '';
-    if (proofEvts != '') {
-      for (var id in jsonDecode(proofEvts).keys) {
-        final evt = jsonDecode(proofEvts)[id];
-        // if(!Nip60.shared.proofEvents.containsKey(id)) { //send proof event to relays if it is not get from relays 
-        //   RelayPool.shared.send('["EVENT",${jsonEncode(evt)}]');
-        // }
-        Nip60.shared.proofEvents[id] = evt;
-      }
     }
 
     // Get proof event from relays 
@@ -391,9 +410,33 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     RelayPool.shared.unsubscribe(subscription.id);
     // ignore: use_build_context_synchronously
     context.loaderOverlay.hide();
+
+    // Check deleted proofs from history
+    for (final hist in Nip60.shared.histories) {
+      for (final evtId in jsonDecode(hist['deleted']!)) {
+        if (Nip60.shared.proofEvents.containsKey(evtId)) {
+          await Nip60.shared.deleteTokenEvent([evtId]);
+        }
+      }
+    }
     
+    // Get proof event from local storage
+    String proofEvts = widget.prefs.getString('proofs') ?? '';
+    if (proofEvts != '') {
+      for (var id in jsonDecode(proofEvts).keys) {
+        final evt = jsonDecode(proofEvts)[id];
+        //send proof event to relays if it is not in relays
+        if(!Nip60.shared.proofEvents.containsKey(id)) { 
+          RelayPool.shared.send('["EVENT",${jsonEncode(evt)}]');
+        }
+        Nip60.shared.proofEvents[id] = evt;
+      }
+    }
+
     //update all proof events to local storage
     widget.prefs.setString('proofs', jsonEncode(Nip60.shared.proofEvents));
+
+    await Nip60.shared.eventToProof();
 
     setState(() {
       balance = 0;
@@ -405,44 +448,6 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     
     widget.prefs.setString('wallet', jsonEncode(Nip60.shared.wallet));
     Nip60.shared.updateWallet();
-
-    _fetchHistoryEvent(isInit: isInit);
-  }
-
-  Future<void> _fetchHistoryEvent({bool isInit = true}) async {
-    if (!isInit) {
-      widget.prefs.setString('history', '');
-    }
-
-    Nip60.shared.histories.clear();
-    String history = widget.prefs.getString('history') ?? '';
-    if (history != '') { 
-      for (var hist in jsonDecode(history)) {
-        Nip60.shared.histories.add(Map.castFrom(hist));
-      }
-    }
-
-    Subscription subscription = Nip60.shared.fetchHistoryEvent();
-    await subscription.timeout.future;
-    RelayPool.shared.unsubscribe(subscription.id);
-    widget.prefs.setString('history', jsonEncode(Nip60.shared.histories));
-
-    for (final hist in Nip60.shared.histories) {
-      for (final evtId in jsonDecode(hist['deleted']!)) {
-        if (Nip60.shared.proofEvents.containsKey(evtId)) {
-          await Nip60.shared.deleteTokenEvent([evtId]);
-        }
-      }
-    }
-    await Nip60.shared.eventToProof();
-
-    setState(() {
-      balance = 0;
-      for (IMint mint in Cashu.shared.mints) {
-        balance += Cashu.shared.proofs[mint]!.totalAmount;
-      }
-      Nip60.shared.wallet['balance'] = balance.toString();
-    });
   }
 
   _onReceive () async {
