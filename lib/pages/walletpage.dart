@@ -441,7 +441,8 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     setState(() {
       balance = 0;
       for (IMint mint in Cashu.shared.mints) {
-        balance += Cashu.shared.proofs[mint]!.totalAmount;
+        mint.balance = Cashu.shared.proofs[mint]!.totalAmount;
+        balance += mint.balance; 
       }
       Nip60.shared.wallet['balance'] = balance.toString();
     });

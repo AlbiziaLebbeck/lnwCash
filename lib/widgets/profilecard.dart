@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:lnwcash/utils/nip01.dart';
 import 'package:lnwcash/utils/subscription.dart';
 import 'package:nostr_core_dart/nostr.dart';
 

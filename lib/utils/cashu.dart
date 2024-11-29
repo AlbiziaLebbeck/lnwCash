@@ -56,17 +56,20 @@ class Cashu {
 
   Future<bool> addMint(String mintURL) async {
     final maxNutsVersion = await MintHelper.getMaxNutsVersion(mintURL);
-    if (maxNutsVersion <= 0) return false;
     
     IMint mint = IMint(mintURL: mintURL, maxNutsVersion: maxNutsVersion);
+    proofs[mint] = <Proof>[];
+    mints.add(mint);
+
+    if (maxNutsVersion <= 0) return false;
+    
     final response = await mint.requestMintInfoAction(mintURL: mint.mintURL);
     if (!response.isSuccess) return false;
     mint.info = response.data;
     if (mint.name.isEmpty) mint.name = response.data.name;
-    
-    mints.add(mint);
+
     keysets[mint] = await KeysetHelper.fetchKeysetFromRemote(mint);
-    proofs[mint] = <Proof>[];
+    
     return true;
   }
 
@@ -110,16 +113,22 @@ class Cashu {
       IMint mint = getMint(entry.mint);
 
       final currentProofs = [...proofs[mint]!];
-      final newProofs = await swapProofs(
-        mint: mint,
-        swapProofs: [...currentProofs, ...entry.proofs],
-      );
-      _updateProofs(newProofs!, mint);
-      await Nip60.shared.rollOverTokenEvent(currentProofs, newProofs, mint.mintURL);
-      for (final proof in currentProofs) {
-        proofs[mint]!.remove(proof);
+      try {
+        final newProofs = await swapProofs(
+          mint: mint,
+          swapProofs: [...currentProofs, ...entry.proofs],
+        );
+
+        _updateProofs(newProofs!, mint);
+        await Nip60.shared.rollOverTokenEvent(currentProofs, newProofs, mint.mintURL);
+        for (final proof in currentProofs) {
+          proofs[mint]!.remove(proof);
+        }
+        notifyListenerForBalanceChanged(mint);
+      } catch (_) {
+        notifyError('Error: Mint is disconnected');
+        return;
       }
-      notifyListenerForBalanceChanged(mint);
     }
   }
 
@@ -176,7 +185,10 @@ class Cashu {
       mintURL: mint.mintURL,
       amount: amount,
     );
-    if (!response.isSuccess) return null;
+    if (!response.isSuccess) {
+      notifyError('Error: Mint is disconnected');
+      return null;
+    }
 
     if (_invoices.isEmpty) {
       startHighFrequencyDetection();
@@ -365,6 +377,9 @@ class Cashu {
       );
       if (quoteResponse.isSuccess && quoteResponse.data.quote.isNotEmpty) {
         _quotes[mint] = quoteResponse.data;
+      } else {
+        notifyError('Error: Mint is disconnected');
+        return;
       }
     }
 
