@@ -43,8 +43,7 @@ class WalletPage extends StatefulWidget {
 
 class _WalletPage extends State<WalletPage> with CashuListener {
 
-  
-  String version = '0.0.8';
+  String version = '0.0.9';
 
   late final String pub;
   late final String priv;

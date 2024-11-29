@@ -435,17 +435,22 @@ class Cashu {
     final change = <Proof>[];
 
     if (usedProofs.totalAmount > amount) {
-      final swapedProof = await swapProofs(
-        mint: mint, 
-        swapProofs: usedProofs,
-        supportAmount: amount,
-      );  
-      for (final proof in swapedProof!) {
-        if (sendingProofs.totalAmount < amount) {
-          sendingProofs.add(proof);
-        } else {
-          change.add(proof);
+      try {
+        final swapedProof = await swapProofs(
+          mint: mint, 
+          swapProofs: usedProofs,
+          supportAmount: amount,
+        );  
+        for (final proof in swapedProof!) {
+          if (sendingProofs.totalAmount < amount) {
+            sendingProofs.add(proof);
+          } else {
+            change.add(proof);
+          }
         }
+      } catch(_) {
+        notifyError('Error: Mint is disconnected');
+        return;
       }
     } else {
       sendingProofs.addAll([...usedProofs]);
