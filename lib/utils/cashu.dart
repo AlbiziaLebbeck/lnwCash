@@ -26,6 +26,7 @@ import 'package:lnwcash/utils/nip60.dart';
 
 // ignore: depend_on_referenced_packages
 import 'package:pointycastle/export.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Cashu {
   static final Cashu shared = Cashu._internal();
@@ -49,7 +50,26 @@ class Cashu {
   final List<String> _ecashToken = [];
   Completer _ecashCreated = Completer();
 
-  Future<void> initialize() async {
+  late final SharedPreferences prefs;
+
+  Future<void> initialize(SharedPreferences prefs) async {
+    this.prefs = prefs;
+    final preInvoices = prefs.getStringList('invoice');
+    if (preInvoices != null) {
+      for (var invStr in preInvoices) {
+        final invMap = Map.castFrom(jsonDecode(invStr));
+        final inv = IInvoice(
+          quote: invMap['quote'], 
+          request: invMap['request'], 
+          paid: invMap['paid'], 
+          amount: invMap['amount'].toString(), 
+          expiry: invMap['expiry'], 
+          mintURL: invMap['mintURL']
+        );
+        _invoices.add(inv);
+      }
+    }
+
     invoiceChecker = TaskScheduler(task: _periodicCheck)..start();
     Future.delayed(const Duration(seconds: 10), () => invoiceChecker?.initComplete());
   }
@@ -196,6 +216,14 @@ class Cashu {
 
     invoicePaid = Completer();
     _invoices.add(response.data);
+    prefs.setStringList('invoice', _invoices.map((inv) => jsonEncode({
+      'quote': inv.redemptionKey,
+      'request': inv.request,
+      'paid': false,
+      'amount': amount,
+      'expiry': inv.expiry,
+      'mintURL': inv.mintURL,
+    })).toList());
     checkInvoice(response.data);
     _invoiceCreated.complete();
     return response.data;
@@ -245,6 +273,15 @@ class Cashu {
         _invoices.remove(invoice);
       }
     }
+
+    prefs.setStringList('invoice', _invoices.map((inv) => jsonEncode({
+      'quote': inv.redemptionKey,
+      'request': inv.request,
+      'paid': false,
+      'amount': amount,
+      'expiry': inv.expiry,
+      'mintURL': inv.mintURL,
+    })).toList());
 
     _pendingInvoices.remove(invoice);
 

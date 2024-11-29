@@ -92,7 +92,7 @@ class _WalletPage extends State<WalletPage> with CashuListener {
 
     await _fetchWalletEvent();
     
-    Cashu.shared.initialize();
+    Cashu.shared.initialize(widget.prefs);
   }
 
   @override
