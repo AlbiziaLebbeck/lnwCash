@@ -4,9 +4,12 @@ import 'dart:convert';
 import 'package:bolt11_decoder/bolt11_decoder.dart';
 
 import 'package:cashu_dart/business/mint/mint_helper.dart';
+import 'package:cashu_dart/business/proof/keyset_helper.dart';
 import 'package:cashu_dart/core/DHKE_helper.dart';
 import 'package:cashu_dart/core/mint_actions.dart';
 import 'package:cashu_dart/core/nuts/nut_00.dart';
+import 'package:cashu_dart/core/nuts/token/proof.dart';
+import 'package:cashu_dart/core/nuts/token/token_model.dart';
 import 'package:cashu_dart/core/nuts/v1/nut.dart';
 import 'package:cashu_dart/model/invoice.dart';
 import 'package:cashu_dart/model/invoice_listener.dart';
@@ -62,7 +65,7 @@ class Cashu {
     if (mint.name.isEmpty) mint.name = response.data.name;
     
     mints.add(mint);
-    keysets[mint] = await MintHelper.fetchKeysetFromRemote(mint);
+    keysets[mint] = await KeysetHelper.fetchKeysetFromRemote(mint);
     proofs[mint] = <Proof>[];
     return true;
   }

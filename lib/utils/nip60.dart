@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:cashu_dart/core/nuts/nut_00.dart';
+import 'package:cashu_dart/core/nuts/token/proof.dart';
 import 'package:cashu_dart/model/mint_model.dart';
 import 'package:lnwcash/utils/cashu.dart';
 import 'package:lnwcash/utils/nip01.dart';

@@ -70,6 +70,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.2.2"
+  bip32:
+    dependency: transitive
+    description:
+      name: bip32
+      sha256: "54787cd7a111e9d37394aabbf53d1fc5e2e0e0af2cd01c459147a97c0e3f8a97"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.0"
   bip340:
     dependency: transitive
     description:
@@ -78,6 +86,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.3.0"
+  bip39:
+    dependency: transitive
+    description:
+      name: bip39
+      sha256: de1ee27ebe7d96b84bb3a04a4132a0a3007dcdd5ad27dd14aa87a29d97c45edc
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.6"
   bolt11_decoder:
     dependency: "direct main"
     description:
@@ -94,6 +110,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.1"
+  bs58check:
+    dependency: transitive
+    description:
+      name: bs58check
+      sha256: c4a164d42b25c2f6bc88a8beccb9fc7d01440f3c60ba23663a20a70faf484ea9
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.2"
   build:
     dependency: transitive
     description:
@@ -161,10 +185,18 @@ packages:
   cashu_dart:
     dependency: "direct main"
     description:
-      path: cashu-dart-main
+      path: cashu-dart
       relative: true
     source: path
     version: "0.0.1"
+  cbor:
+    dependency: transitive
+    description:
+      name: cbor
+      sha256: "69b1fe99f4632acc597034d73a5eb440f82667b58e2489223bb798e31b6c90db"
+      url: "https://pub.dev"
+    source: hosted
+    version: "6.3.3"
   characters:
     dependency: transitive
     description:
@@ -388,6 +420,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.1"
+  ieee754:
+    dependency: transitive
+    description:
+      name: ieee754
+      sha256: "7d87451c164a56c156180d34a4e93779372edd191d2c219206100b976203128c"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.3"
   io:
     dependency: transitive
     description:

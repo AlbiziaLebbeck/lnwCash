@@ -1,4 +1,5 @@
 import 'package:cashu_dart/business/proof/token_helper.dart';
+import 'package:cashu_dart/core/nuts/nut_00.dart';
 import 'package:cashu_dart/model/mint_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -132,8 +133,7 @@ class _ReceiveButtomSheet extends State<ReceiveButtomSheet> {
                   ),
                   validator: (value) {
                     if (value!.isEmpty) return 'Token is empty';
-                    if (value.startsWith('cashuB')) return 'V4 is not supported';
-                    final token = TokenHelper.getDecodedToken(value);
+                    final token = Nut0.decodedToken(value);// TokenHelper.getDecodedToken(value);
                     if (token == null) return 'Invalid token';
 
                     Cashu.shared.redeemEcash(token: token);

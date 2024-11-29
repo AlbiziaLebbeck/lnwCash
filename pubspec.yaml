@@ -41,7 +41,7 @@ dependencies:
   nostr_core_dart:
     path: ./nostr-dart-main
   cashu_dart:
-    path: ./cashu-dart-main
+    path: ./cashu-dart
   shared_preferences: ^2.3.2
   js: ^0.6.7
   loader_overlay: ^4.0.1
