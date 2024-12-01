@@ -1,11 +1,19 @@
+import 'dart:convert';
+
 import 'package:cashu_dart/core/nuts/nut_00.dart';
 import 'package:cashu_dart/core/nuts/v1/nut_05.dart';
 import 'package:cashu_dart/model/mint_model.dart';
+import 'package:cashu_dart/utils/network/http_client.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lnwcash/utils/cashu.dart';
+
 import 'package:loader_overlay/loader_overlay.dart';
 import 'package:qrcode_reader_web/qrcode_reader_web.dart';
+import 'package:bech32/bech32.dart';
+// ignore: implementation_imports
+import 'package:bolt11_decoder/src/word_reader.dart';
 
 Future<dynamic> sendButtomSheet(context) async{
   return showModalBottomSheet(context: context,
@@ -27,6 +35,8 @@ class _SendButtomSheet extends State<SendButtomSheet> {
 
   final _ecashFormKey = GlobalKey<FormState>();
   final _lightningFormKey = GlobalKey<FormState>();
+
+  bool _scanDetected = false;
 
   final TextEditingController _lightningController = TextEditingController();
 
@@ -178,7 +188,7 @@ class _SendButtomSheet extends State<SendButtomSheet> {
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(25),
                     ),
-                    labelText: 'Paste a lightning invoice',
+                    labelText: 'Paste a lightning invoice or address',
                     suffixIcon: Container(
                       margin: const EdgeInsets.only(right: 5),
                       child:Column(
@@ -186,11 +196,15 @@ class _SendButtomSheet extends State<SendButtomSheet> {
                         children: [
                           IconButton(
                             onPressed: () async {
+                              _scanDetected = false;
                               showDialog(context: context,
                                 builder: (context) => QRCodeReaderTransparentWidget(
                                   onDetect: (QRCodeCapture capture) {
-                                    _lightningController.text = capture.raw;
-                                    Navigator.of(context).pop();
+                                    if (!_scanDetected) {
+                                      _scanDetected = true;
+                                      _lightningController.text = capture.raw;
+                                      Navigator.of(context).pop();
+                                    }
                                   },
                                 ),
                               );
@@ -211,7 +225,7 @@ class _SendButtomSheet extends State<SendButtomSheet> {
                     ),
                   ),
                   validator: (value) {
-                    if (value!.isEmpty) return 'Lightning invoice is empty';
+                    if (value!.isEmpty) return 'Lightning invoice or address is empty';
                     
                     return Cashu.shared.payingLightningInvoice(value);
                   }
@@ -223,7 +237,19 @@ class _SendButtomSheet extends State<SendButtomSheet> {
                     minimumSize: const Size(double.infinity, 55),
                   ),
                   onPressed: () async {
+                    final lnurl = await checkLnAddress(_lightningController.text, context);
+                    if (lnurl != null) {
+                      Cashu.shared.payingLightningInvoice(lnurl);
+                      // ignore: use_build_context_synchronously
+                      context.loaderOverlay.show();
+                      // ignore: use_build_context_synchronously
+                      Navigator.of(context).pop('lightning');
+                    }
+
                     if(_lightningFormKey.currentState!.validate()) {
+                      // ignore: use_build_context_synchronously
+                      context.loaderOverlay.show();
+                      // ignore: use_build_context_synchronously
                       Navigator.of(context).pop('lightning');
                     }
                   },
@@ -236,6 +262,62 @@ class _SendButtomSheet extends State<SendButtomSheet> {
       )
     );
   }
+}
+
+Future<String?> checkLnAddress(String lnText, BuildContext context) async {
+  if (lnText.startsWith('lightning:')) {
+    lnText = lnText.substring('lightning:'.length);
+  }
+  
+  if (lnText.toLowerCase().startsWith('lnurl')) {
+    final bech32 = const Bech32Codec().decode(
+      lnText,
+      2000,
+    );
+    var data = WordReader(bech32.data);
+    final url = utf8.decode(data.read(data.words.length*5)); 
+    final response = await HTTPClient.get(
+      url.substring(0, url.length - 1),
+      modelBuilder: (json) {
+        if (json is !Map) return null; 
+        return json;
+      },
+    );
+    if (response.isSuccess) {
+      // ignore: use_build_context_synchronously
+      final lnurl = await showDialog(context: context,
+        builder: (context) => PayLNAddressDialog(lnText, response.data),
+      );
+
+      if (lnurl != null) {
+        return lnurl;
+      }
+    }
+  }
+
+  if (lnText.split('@').length == 2) {
+    final username = lnText.split('@')[0];
+    final domain = lnText.split('@')[1];
+    final response = await HTTPClient.get(
+      'https://$domain/.well-known/lnurlp/$username',
+      modelBuilder: (json) {
+        if (json is !Map) return null; 
+        return json;
+      },
+    );
+    if (response.isSuccess) {
+      // ignore: use_build_context_synchronously
+      final lnurl = await showDialog(context: context,
+        builder: (context) => PayLNAddressDialog(lnText, response.data),
+      );
+
+      if (lnurl != null) {
+        return lnurl;
+      }
+    }
+  }
+
+  return null;
 }
 
 class PayQuoteDialog extends StatefulWidget {
@@ -267,7 +349,7 @@ class _PayQuoteDialog extends State<PayQuoteDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('Select mint:', style: const TextStyle(fontSize: 16),),
+          const Text('Select mint:', style: TextStyle(fontSize: 16),),
           const SizedBox(height: 10,),
           DropdownButtonFormField(
             decoration: InputDecoration(
@@ -308,6 +390,116 @@ class _PayQuoteDialog extends State<PayQuoteDialog> {
                   widget.quotes[_selected]!
                 );
                 Navigator.of(context).pop("paying");
+              }, 
+              child: const Text('Send', style: TextStyle(fontSize: 16))
+            ),
+            const SizedBox(width: 5,),
+            TextButton(
+              onPressed: () {Navigator.of(context).pop();}, 
+              child: const Text('Close', style: TextStyle(fontSize: 16))
+            ),
+          ]
+        ),
+      ],
+    );
+  }
+}
+
+class PayLNAddressDialog extends StatefulWidget {
+  const PayLNAddressDialog(this.address, this.payRequest, {super.key});
+
+  final String address;
+  final Map payRequest;
+
+  @override
+  State<PayLNAddressDialog> createState() => _PayLNAddressDialog();
+}
+
+class _PayLNAddressDialog extends State<PayLNAddressDialog> {
+
+  bool _validate = false;
+  String _errorText = '';
+  final _amountController = TextEditingController();
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text("Send to:",
+        style: TextStyle(fontSize: 20),
+      ),
+      content: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(widget.address,
+            style: const TextStyle(fontSize: 16),
+          ),
+          const SizedBox(height: 10,),
+          TextField(
+            controller: _amountController,
+            keyboardType: TextInputType.number,
+            inputFormatters: <TextInputFormatter>[
+              FilteringTextInputFormatter.digitsOnly
+            ], 
+            decoration: InputDecoration(
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(25),
+                borderSide: BorderSide(color: Theme.of(context).colorScheme.primary)
+              ),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(25)),
+              labelText: 'Amount (sat)',
+              errorText: _validate ? _errorText : null,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        Row(
+          children: [
+            const Expanded(child: SizedBox(height: 10,)),
+            FilledButton(
+              onPressed: () async {
+                if (_amountController.text == "") {
+                  setState(() {
+                    _errorText = 'Please fill amount of sat';
+                    _validate = true;
+                  });
+                  return;
+                }
+
+                int amount = int.parse(_amountController.text);
+                int minSendable = widget.payRequest['minSendable']~/1000;
+                if (amount < minSendable) {
+                  setState(() {
+                    _errorText = 'Amount must not less than $minSendable';
+                    _validate = true;
+                  });
+                  return;
+                }
+
+                int maxSendable = widget.payRequest['maxSendable']~/1000;
+                if (amount > maxSendable) {
+                  setState(() {
+                    _errorText = 'Amount must not greater than $maxSendable';
+                    _validate = true;
+                  });
+                  return;
+                }
+
+                final response = await HTTPClient.get(
+                  widget.payRequest['callback'] + '?amount=${amount*1000}',
+                  modelBuilder: (json) {
+                    return json['pr'];
+                  },
+                );
+
+                if (response.isSuccess) {
+                  // ignore: use_build_context_synchronously
+                  Navigator.of(context).pop(response.data);
+                } else {
+                  // ignore: use_build_context_synchronously
+                  Navigator.of(context).pop();
+                }
               }, 
               child: const Text('Send', style: TextStyle(fontSize: 16))
             ),

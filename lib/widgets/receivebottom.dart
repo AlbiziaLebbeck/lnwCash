@@ -28,6 +28,8 @@ class _ReceiveButtomSheet extends State<ReceiveButtomSheet> {
 
   final TextEditingController _ecashController = TextEditingController();
 
+  bool _scanDetected = false;
+
   @override
   void initState() {
     super.initState();
@@ -109,8 +111,11 @@ class _ReceiveButtomSheet extends State<ReceiveButtomSheet> {
                               showDialog(context: context,
                                 builder: (context) => QRCodeReaderTransparentWidget(
                                   onDetect: (QRCodeCapture capture) {
-                                    _ecashController.text = capture.raw;
-                                    Navigator.of(context).pop();
+                                    if (!_scanDetected) {
+                                      _scanDetected = true;
+                                      _ecashController.text = capture.raw;
+                                      Navigator.of(context).pop();
+                                    }
                                   },
                                 ),
                               );

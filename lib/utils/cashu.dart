@@ -389,7 +389,7 @@ class Cashu {
 
   String? payingLightningInvoice(String invoice) {
     final req = _tryConstructRequestFromPr(invoice);
-    if (req == null) return 'Lightning invoice is incorrect';
+    if (req == null) return 'Lightning invoice or address is incorrect';
 
     final amount = (req.amount * Decimal.fromInt(100000000)).toBigInt();
     List<IMint> availableMint = [];

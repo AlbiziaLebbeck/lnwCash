@@ -500,6 +500,9 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     } else if (action == 'lightning') {
       final quotes = await Cashu.shared.getLastestQuote();
       // ignore: use_build_context_synchronously
+      context.loaderOverlay.hide();
+      
+      // ignore: use_build_context_synchronously
       showDialog(context: context,
         builder: (context) => PayQuoteDialog(quotes),
       ).then((value) {
