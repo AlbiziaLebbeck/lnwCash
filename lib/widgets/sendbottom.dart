@@ -244,9 +244,7 @@ class _SendButtomSheet extends State<SendButtomSheet> {
                       context.loaderOverlay.show();
                       // ignore: use_build_context_synchronously
                       Navigator.of(context).pop('lightning');
-                    }
-
-                    if(_lightningFormKey.currentState!.validate()) {
+                    } else if (_lightningFormKey.currentState!.validate()) {
                       // ignore: use_build_context_synchronously
                       context.loaderOverlay.show();
                       // ignore: use_build_context_synchronously

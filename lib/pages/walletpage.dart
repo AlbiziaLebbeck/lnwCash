@@ -397,15 +397,28 @@ class _WalletPage extends State<WalletPage> with CashuListener {
       widget.prefs.setString('proofs', '');
     }
 
-    Nip60.shared.proofEvents.clear();
-
-    // Get proof event from relays 
-    context.loaderOverlay.show();
-    Subscription subscription = Nip60.shared.fetchProofEvent();
-    await subscription.timeout.future;
-    RelayPool.shared.unsubscribe(subscription.id);
-    // ignore: use_build_context_synchronously
-    context.loaderOverlay.hide();
+    Nip60.shared.proofEvents.clear();    
+    String proofEvts = widget.prefs.getString('proofs') ?? '';
+    if (proofEvts != '') {
+      // Get proof event from local storage
+      for (var id in jsonDecode(proofEvts).keys) {
+        final evt = jsonDecode(proofEvts)[id];
+        //send proof event to relays if it is not in relays
+        // if(!Nip60.shared.proofEvents.containsKey(id)) { 
+        //   RelayPool.shared.send('["EVENT",${jsonEncode(evt)}]');
+        // }
+        Nip60.shared.proofEvents[id] = evt;
+      }
+    } else {
+      // Get proof event from relays 
+      // ignore: use_build_context_synchronously
+      context.loaderOverlay.show();
+      Subscription subscription = Nip60.shared.fetchProofEvent();
+      await subscription.timeout.future;
+      RelayPool.shared.unsubscribe(subscription.id);
+      // ignore: use_build_context_synchronously
+      context.loaderOverlay.hide();
+    }
 
     // Check deleted proofs from history
     for (final hist in Nip60.shared.histories) {
@@ -413,19 +426,6 @@ class _WalletPage extends State<WalletPage> with CashuListener {
         if (Nip60.shared.proofEvents.containsKey(evtId)) {
           await Nip60.shared.deleteTokenEvent([evtId]);
         }
-      }
-    }
-    
-    // Get proof event from local storage
-    String proofEvts = widget.prefs.getString('proofs') ?? '';
-    if (proofEvts != '') {
-      for (var id in jsonDecode(proofEvts).keys) {
-        final evt = jsonDecode(proofEvts)[id];
-        //send proof event to relays if it is not in relays
-        if(!Nip60.shared.proofEvents.containsKey(id)) { 
-          RelayPool.shared.send('["EVENT",${jsonEncode(evt)}]');
-        }
-        Nip60.shared.proofEvents[id] = evt;
       }
     }
 

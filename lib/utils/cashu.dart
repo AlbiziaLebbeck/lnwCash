@@ -50,7 +50,7 @@ class Cashu {
   final List<String> _ecashToken = [];
   Completer _ecashCreated = Completer();
 
-  late final SharedPreferences prefs;
+  late SharedPreferences prefs;
 
   Future<void> initialize(SharedPreferences prefs) async {
     this.prefs = prefs;
@@ -72,6 +72,7 @@ class Cashu {
 
     invoiceChecker = TaskScheduler(task: _periodicCheck)..start();
     Future.delayed(const Duration(seconds: 10), () => invoiceChecker?.initComplete());
+    if (_invoices.isNotEmpty) startHighFrequencyDetection();
   }
 
   Future<bool> addMint(String mintURL) async {
