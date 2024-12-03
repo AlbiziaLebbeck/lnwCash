@@ -319,26 +319,22 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     context.loaderOverlay.show();
     Nip60.shared.wallet.clear();
 
-    if (isInit) {
-      String walletStr = widget.prefs.getString('wallet') ?? '';
-      if (walletStr != '') {
-        setState(() {
-          Nip60.shared.wallet = Map.castFrom(jsonDecode(walletStr));
-        });
+    String walletStr = widget.prefs.getString('wallet') ?? '';
+    if (isInit && walletStr != '') {
+      Nip60.shared.wallet = Map.castFrom(jsonDecode(walletStr));
+    } else {
+      Subscription subscription = Nip60.shared.fetchWalletEvent();
+      await subscription.timeout.future;
+      RelayPool.shared.unsubscribe(subscription.id);
+      // ignore: use_build_context_synchronously
+      context.loaderOverlay.hide();
+      
+      if (Nip60.shared.wallet.isEmpty || !isInit) {
+        // ignore: use_build_context_synchronously
+        await walletManager(context);
       }
     }
 
-    Subscription subscription = Nip60.shared.fetchWalletEvent();
-    await subscription.timeout.future;
-    RelayPool.shared.unsubscribe(subscription.id);
-    // ignore: use_build_context_synchronously
-    context.loaderOverlay.hide();
-    
-    if (Nip60.shared.wallet.isEmpty || !isInit) {
-      // ignore: use_build_context_synchronously
-      await walletManager(context);
-    }
-    
     setState(() {
       balance = num.parse(Nip60.shared.wallet['balance']!);
     });
@@ -371,23 +367,22 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     }
 
     Nip60.shared.histories.clear();
-
-    // Get history event from relays
-    context.loaderOverlay.show();
-    Subscription subscription = Nip60.shared.fetchHistoryEvent();
-    await subscription.timeout.future;
-    RelayPool.shared.unsubscribe(subscription.id);
-    // ignore: use_build_context_synchronously
-    context.loaderOverlay.hide();
-
-    // Get history event from local storage
     String history = widget.prefs.getString('history') ?? '';
-    if (history != '') { 
+    if (history != '') {
+      // Get history event from local storage
       for (var hist in jsonDecode(history)) {
         if (Nip60.shared.histories.where((e) => e['id'] == hist['id']).isEmpty) {
           Nip60.shared.histories.add(Map.castFrom(hist));
         }
       }
+    } else {
+      // Get history event from relays
+      context.loaderOverlay.show();
+      Subscription subscription = Nip60.shared.fetchHistoryEvent();
+      await subscription.timeout.future;
+      RelayPool.shared.unsubscribe(subscription.id);
+      // ignore: use_build_context_synchronously
+      context.loaderOverlay.hide();
     }
 
     widget.prefs.setString('history', jsonEncode(Nip60.shared.histories));
@@ -401,6 +396,8 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     if (!isInit) {
       widget.prefs.setString('proofs', '');
     }
+
+    Nip60.shared.proofEvents.clear();
 
     // Get proof event from relays 
     context.loaderOverlay.show();
