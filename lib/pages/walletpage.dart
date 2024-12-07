@@ -375,19 +375,17 @@ class _WalletPage extends State<WalletPage> with CashuListener {
           Nip60.shared.histories.add(Map.castFrom(hist));
         }
       }
-    } else {
-      // Get history event from relays
-      context.loaderOverlay.show();
-      Subscription subscription = Nip60.shared.fetchHistoryEvent();
-      await subscription.timeout.future;
-      RelayPool.shared.unsubscribe(subscription.id);
-      // ignore: use_build_context_synchronously
-      context.loaderOverlay.hide();
     }
+    // Get history event from relays
+    context.loaderOverlay.show();
+    Subscription subscription = Nip60.shared.fetchHistoryEvent();
+    await subscription.timeout.future;
+    RelayPool.shared.unsubscribe(subscription.id);
+    // ignore: use_build_context_synchronously
+    context.loaderOverlay.hide();
 
     widget.prefs.setString('history', jsonEncode(Nip60.shared.histories));
 
-    setState(() {});
     _fetchProofEvent(isInit: isInit);
   }
 
@@ -409,16 +407,14 @@ class _WalletPage extends State<WalletPage> with CashuListener {
         // }
         Nip60.shared.proofEvents[id] = evt;
       }
-    } else {
-      // Get proof event from relays 
-      // ignore: use_build_context_synchronously
-      context.loaderOverlay.show();
-      Subscription subscription = Nip60.shared.fetchProofEvent();
-      await subscription.timeout.future;
-      RelayPool.shared.unsubscribe(subscription.id);
-      // ignore: use_build_context_synchronously
-      context.loaderOverlay.hide();
     }
+    // Get proof event from relays 
+    context.loaderOverlay.show();
+    Subscription subscription = Nip60.shared.fetchProofEvent();
+    await subscription.timeout.future;
+    RelayPool.shared.unsubscribe(subscription.id);
+    // ignore: use_build_context_synchronously
+    context.loaderOverlay.hide();
 
     // Check deleted proofs from history
     for (final hist in Nip60.shared.histories) {

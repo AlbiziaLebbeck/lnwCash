@@ -231,6 +231,7 @@ class Nip60 {
       )], 
       onEvent: (event) async {
         if (event['tags'].where((e) => e[0] == 'a').toList().isEmpty) return;
+        if (proofEvents.containsKey(event['id'])) return;
         
         String aTag = event['tags'].where((e) => e[0] == 'a').toList()[0][1];
         if(aTag.split(':').length < 3) return;
@@ -340,7 +341,8 @@ class Nip60 {
         final aTag = event['tags'].where((e) => e[0] == 'a').toList()[0][1];
         if(aTag.split(':').length < 3) return;
         if(aTag.split(':')[2] != Nip60.shared.wallet['id']) return;
-
+        if (histories.where((h) => h['id'] == event['id']).isNotEmpty) return;
+        
         final decryptMsg = jsonDecode((await Signer.shared.nip44Decrypt(event['content']))!);
         final deletedEvent = decryptMsg.where((c) => c[0] == 'e' && c[3] == 'destroyed')
           .map((c) => c[1]).toList();
