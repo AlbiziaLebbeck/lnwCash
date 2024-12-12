@@ -24,13 +24,12 @@ class RelayPool {
 
     Relay relay = Relay(url);
     relay.onMessage = _onEvent;
-    _relays[relay.url] = relay;
 
     if (await relay.connect()) {
+      _relays[relay.url] = relay;
       for (Subscription subscription in _subscriptions.values) {
         relay.send(subscription.request());
       }
-
       return true;
     }
     return false;
@@ -83,16 +82,22 @@ class RelayPool {
     final subId = message[1];
     Subscription? subscription = _subscriptions[subId];
     if (subscription != null) {
+      print(relay);
+      print(message);
       if (messageType == 'EVENT')
       {
         final event = message[2];
-        if (!subscription.eventId.contains(event['id'])){
-          subscription.getEvent = true;
-          subscription.eventId.add(event['id']);
-          subscription.onEvent(event);
+        if (!subscription.events.containsKey(event['id'])){
+          subscription.events[event['id']] = event;
+          if (subscription.getEOSE) {
+            subscription.onEvent([event]);
+          }
         }
       } else if (messageType == 'EOSE') {
-
+        if (!subscription.getEOSE) {
+          subscription.getEOSE = true;
+          subscription.onEvent(subscription.events);
+        }
       }
     }
   }
@@ -107,7 +112,7 @@ class Relay{
 
   List<dynamic> pendingMessages = [];
 
-  bool isConnecting = false;
+  bool _isConnecting = false;
 
   Future<bool> connect() async {
     if (webSocket != null ) {
@@ -116,7 +121,7 @@ class Relay{
 
     try {
       webSocket = WebSocket(url);
-      isConnecting = true;
+      _isConnecting = true;
 
       webSocket?.onMessage.listen((event) {
         if (onMessage != null) {
@@ -143,23 +148,21 @@ class Relay{
 
   bool send(String message){
     if (webSocket != null){
-      if (!isConnecting) {
+      if (!_isConnecting) {
         try {
           webSocket?.send(message.toJS);
           return true;
         } catch (e) {
-          pendingMessages.add(message); 
           onError(e.toString(), reconnect: true);
         }
-      } else {
-        pendingMessages.add(message);
       }
     }
+    pendingMessages.add(message); 
     return false;
   }
   
   Future onConnected() async {
-    isConnecting = false;
+    _isConnecting = false;
     print('Connected from relay: ${url}');
     for (var message in pendingMessages){
       send(message);

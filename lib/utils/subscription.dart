@@ -12,9 +12,9 @@ class Subscription {
   final List<Filter> filters;
   final Function onEvent;
 
-  final List<String> eventId = [];
+  final Map<String,Object> events = {};
   final Completer timeout = Completer();
-  bool getEvent = false;
+  bool getEOSE = false;
 
   String request() {
     Request request = Request(id, filters);

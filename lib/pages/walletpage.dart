@@ -77,13 +77,14 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     List<String> prefsRelays = widget.prefs.getStringList('relays') ?? [];
     for (String url in prefsRelays)
     {
-      RelayPool.shared.add(url);
+      await RelayPool.shared.add(url);
     }
     if (prefsRelays.isEmpty) {
-      RelayPool.shared.add('wss://relay.siamstr.com');
-      RelayPool.shared.add('wss://relay.notoshi.win');
+      await RelayPool.shared.add('wss://relay.siamstr.com');
+      await RelayPool.shared.add('wss://relay.notoshi.win');
     }
     if (prefsRelays.isEmpty) {
+      // ignore: use_build_context_synchronously
       await relayManager(context);
     }
 
@@ -380,7 +381,7 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     context.loaderOverlay.show();
     Subscription subscription = Nip60.shared.fetchHistoryEvent();
     await subscription.timeout.future;
-    RelayPool.shared.unsubscribe(subscription.id);
+    // RelayPool.shared.unsubscribe(subscription.id);
     // ignore: use_build_context_synchronously
     context.loaderOverlay.hide();
 
@@ -412,7 +413,7 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     context.loaderOverlay.show();
     Subscription subscription = Nip60.shared.fetchProofEvent();
     await subscription.timeout.future;
-    RelayPool.shared.unsubscribe(subscription.id);
+    // RelayPool.shared.unsubscribe(subscription.id);
     // ignore: use_build_context_synchronously
     context.loaderOverlay.hide();
 

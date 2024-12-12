@@ -43,7 +43,8 @@ class _ProfileCard extends State<ProfileCard> {
         authors: [pub],
         limit: 10,
       )], 
-      onEvent: (event) {
+      onEvent: (events) {
+        var event = events[events.keys.first];
         dynamic content = jsonDecode(event['content']);
         setState(() {
           name = content["display_name"] ?? content["name"];

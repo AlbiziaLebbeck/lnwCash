@@ -85,8 +85,8 @@ class Nip60 {
         kinds: [37375],
         authors: [Signer.shared.pub!],
       )], 
-      onEvent: (event) async {
-        if (event != null) {
+      onEvent: (events) async {
+        events.forEach((id, event) async {
           if (event['tags'].where((e) => e[0] == 'deleted').toList().isNotEmpty) return;
           if (event['tags'].where((e) => e[0] == 'd').toList().isEmpty) return;
 
@@ -125,7 +125,7 @@ class Nip60 {
               wallet = wallets.last;
             }
           }
-        }
+        });
       }
     );
     RelayPool.shared.subscribe(subscription, timeout: 3);
@@ -229,15 +229,17 @@ class Nip60 {
         kinds: [7375],
         authors: [Signer.shared.pub!],
       )], 
-      onEvent: (event) async {
-        if (event['tags'].where((e) => e[0] == 'a').toList().isEmpty) return;
-        if (proofEvents.containsKey(event['id'])) return;
-        
-        String aTag = event['tags'].where((e) => e[0] == 'a').toList()[0][1];
-        if(aTag.split(':').length < 3) return;
-        if(aTag.split(':')[2] != Nip60.shared.wallet['id']) return;
+      onEvent: (events) async {
+        events.forEach((id, event) async {
+          if (event['tags'].where((e) => e[0] == 'a').toList().isEmpty) return;
+          if (proofEvents.containsKey(event['id'])) return;
+          
+          String aTag = event['tags'].where((e) => e[0] == 'a').toList()[0][1];
+          if(aTag.split(':').length < 3) return;
+          if(aTag.split(':')[2] != Nip60.shared.wallet['id']) return;
 
-        proofEvents[event['id']] = event;
+          proofEvents[event['id']] = event;
+        });
       }
     );
     
@@ -335,23 +337,25 @@ class Nip60 {
         kinds: [7376],
         authors: [Signer.shared.pub!],
       )], 
-      onEvent: (event) async {
-        if (event['tags'].where((e) => e[0] == 'a').toList().isEmpty) return;
-        
-        final aTag = event['tags'].where((e) => e[0] == 'a').toList()[0][1];
-        if(aTag.split(':').length < 3) return;
-        if(aTag.split(':')[2] != Nip60.shared.wallet['id']) return;
-        if (histories.where((h) => h['id'] == event['id']).isNotEmpty) return;
-        
-        final decryptMsg = jsonDecode((await Signer.shared.nip44Decrypt(event['content']))!);
-        final deletedEvent = decryptMsg.where((c) => c[0] == 'e' && c[3] == 'destroyed')
-          .map((c) => c[1]).toList();
-        histories.add({
-          "id": event['id'],
-          "amount": decryptMsg.where((c) => c[0] == 'amount').first[1].toString(),
-          "direction": decryptMsg.where((c) => c[0] == 'direction').first[1].toString(),
-          "time": event['created_at'].toString(),
-          "deleted": jsonEncode(deletedEvent),
+      onEvent: (events) async {
+        events.forEach((id, event) async {
+          if (event['tags'].where((e) => e[0] == 'a').toList().isEmpty) return;
+          
+          final aTag = event['tags'].where((e) => e[0] == 'a').toList()[0][1];
+          if(aTag.split(':').length < 3) return;
+          if(aTag.split(':')[2] != Nip60.shared.wallet['id']) return;
+          if (histories.where((h) => h['id'] == event['id']).isNotEmpty) return;
+          
+          final decryptMsg = jsonDecode((await Signer.shared.nip44Decrypt(event['content']))!);
+          final deletedEvent = decryptMsg.where((c) => c[0] == 'e' && c[3] == 'destroyed')
+            .map((c) => c[1]).toList();
+          histories.add({
+            "id": event['id'],
+            "amount": decryptMsg.where((c) => c[0] == 'amount').first[1].toString(),
+            "direction": decryptMsg.where((c) => c[0] == 'direction').first[1].toString(),
+            "time": event['created_at'].toString(),
+            "deleted": jsonEncode(deletedEvent),
+          });
         });
       }
     );
