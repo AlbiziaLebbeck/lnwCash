@@ -13,7 +13,7 @@ class Subscription {
   final Function onEvent;
 
   final Map<String,Object> events = {};
-  final Completer timeout = Completer();
+  final Completer finish = Completer();
   bool getEOSE = false;
 
   String request() {

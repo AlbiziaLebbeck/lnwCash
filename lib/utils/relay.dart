@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:js_interop';
 import 'package:nostr_core_dart/nostr.dart' as nostr;
@@ -45,11 +46,7 @@ class RelayPool {
     send(subscription.request());
     if (timeout > 0) {
       Future.delayed(Duration(seconds: timeout), () {
-        // if (!subscription.getEvent)
-        // {
-        subscription.timeout.complete();
-        // unsubscribe(subscription.id);
-        // }
+        if (!subscription.getEOSE) subscription.finish.complete();
       });
     }
     return subscription.id;
@@ -90,13 +87,14 @@ class RelayPool {
         if (!subscription.events.containsKey(event['id'])){
           subscription.events[event['id']] = event;
           if (subscription.getEOSE) {
-            subscription.onEvent([event]);
+            subscription.onEvent({event['id']: event});
           }
         }
       } else if (messageType == 'EOSE') {
         if (!subscription.getEOSE) {
+          await subscription.onEvent(subscription.events);
           subscription.getEOSE = true;
-          subscription.onEvent(subscription.events);
+          if (!subscription.finish.isCompleted) subscription.finish.complete();
         }
       }
     }
@@ -112,57 +110,57 @@ class Relay{
 
   List<dynamic> pendingMessages = [];
 
-  bool _isConnecting = false;
+  Completer _connecting = Completer();
 
   Future<bool> connect() async {
     if (webSocket != null ) {
       return true;
     }
 
-    try {
-      webSocket = WebSocket(url);
-      _isConnecting = true;
+    _connecting = Completer();
 
-      webSocket?.onMessage.listen((event) {
-        if (onMessage != null) {
-          onMessage!(url,event.data.toString());
-        }
-      });
+    webSocket = WebSocket(url);
+    webSocket?.onMessage.listen((event) {
+      if (onMessage != null) {
+        onMessage!(url,event.data.toString());
+      }
+    });
 
-      webSocket?.onOpen.listen((event) {
-        onConnected();
-      });
+    webSocket?.onOpen.listen((event) {
+      onConnected();
+    });
 
-      return true;
-    } catch (e) {
-      onError(e.toString(), reconnect: true);
-    }
+    webSocket?.onError.listen((event) {
+      onError(event.toString(), reconnect: true);
+      _connecting.complete();
+    });
 
-    return false;
+    await _connecting.future;
+    return webSocket != null ? true : false;
   }
 
-  Future<void> disconnect() async {
+  disconnect() {
     webSocket?.close();
     webSocket = null;
   }
 
   bool send(String message){
     if (webSocket != null){
-      if (!_isConnecting) {
+      if (_connecting.isCompleted) {
         try {
           webSocket?.send(message.toJS);
           return true;
         } catch (e) {
           onError(e.toString(), reconnect: true);
+          pendingMessages.add(message); 
         }
       }
     }
-    pendingMessages.add(message); 
     return false;
   }
   
   Future onConnected() async {
-    _isConnecting = false;
+    _connecting.complete();
     print('Connected from relay: ${url}');
     for (var message in pendingMessages){
       send(message);
@@ -177,7 +175,6 @@ class Relay{
 
   void onError(String errMsg, {bool reconnect = false}) {
     disconnect();
-
     if (reconnect && !_waitingReconnect) {
       _waitingReconnect = true;
       Future.delayed(const Duration(seconds: 30), () {

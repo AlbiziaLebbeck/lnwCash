@@ -17,8 +17,8 @@ import 'package:lnwcash/utils/nip60.dart';
 
 Drawer getDrawer(BuildContext context, {
   required SharedPreferences prefs,
-  required Future<void> Function({bool isInit}) fetchWalletEvent,
-  required Future<void> Function({bool isInit}) fetchProofEvent,
+  required Future<void> Function({bool isInit}) fetchWallet,
+  required Future<void> Function({bool isInit}) loadProofs,
   required String version,
 }) {
   final npub = Nip19.encodePubkey(prefs.getString('pub') ?? '').toString();
@@ -61,7 +61,7 @@ Drawer getDrawer(BuildContext context, {
           title: const Text('Wallets'),
           onTap: () {
             Navigator.of(context).pop();
-            fetchWalletEvent(isInit: false);
+            fetchWallet(isInit: false);
           },
         ),
         ListTile(
@@ -71,7 +71,7 @@ Drawer getDrawer(BuildContext context, {
             Navigator.of(context).pop();
             mintManager(context).then((_) {
               Nip60.shared.wallet['mints'] =  jsonEncode(Cashu.shared.mints.map((m) => m.mintURL).toList());
-              fetchProofEvent(isInit: false);
+              loadProofs(isInit: false);
             });
           },
         ),

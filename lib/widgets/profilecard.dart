@@ -54,8 +54,8 @@ class _ProfileCard extends State<ProfileCard> {
       }
     );
     RelayPool.shared.subscribe(subscription, timeout: 3);
-    await subscription.timeout.future;
-    RelayPool.shared.unsubscribe(subscription.id);
+    await subscription.finish.future;
+    // RelayPool.shared.unsubscribe(subscription.id);
   }
 
   @override

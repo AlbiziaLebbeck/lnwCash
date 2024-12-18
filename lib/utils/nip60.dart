@@ -160,6 +160,102 @@ class Nip60 {
     RelayPool.shared.send(event!.serialize());
   }
 
+
+  Future<void> createHistoryEvent(List<String> createdEvt, List<String> destroyedEvt) async {
+    final content = <List<String>>[];
+    int amount = 0;
+    for (var evt in createdEvt) {
+      content.add(["e", evt, RelayPool.shared.getRelayURL().first, "created"]);
+      amount += eventProofs[evt]!.totalAmount;
+    }
+    for (var evt in destroyedEvt) {
+      content.add(["e", evt, RelayPool.shared.getRelayURL().first, "destroyed"]);
+      amount -= eventProofs[evt]!.totalAmount;
+    }
+    if (amount > 0) {
+      content.add(["direction", "in"]);
+      content.add(["amount", "$amount", "sat"]);
+    }
+    else {
+      content.add(["direction", "out"]);
+      content.add(["amount", "${-amount}", "sat"]);
+    }
+
+    await deleteTokenEvent(destroyedEvt);
+
+    String? encryptedContent = await Signer.shared.nip44Encrypt(jsonEncode(content));
+
+    List<List<String>> tags = [];
+    tags.add(['a', '37375:${Signer.shared.pub}:${wallet['id']}']);
+
+    Event? event = await createEvent(
+      kind: 7376, 
+      tags: tags, 
+      content: encryptedContent!,
+    );
+    
+    RelayPool.shared.send(event!.serialize());
+    histories.insert(0, {
+      "id": event.id,
+      "amount": amount.abs().toString(),
+      "direction": amount > 0 ? "in" : "out",
+      "time": event.createdAt.toString(),
+      "deleted": jsonEncode(destroyedEvt),
+    });
+  }
+
+  Future<void> deleteHistEvent(List<String> events) async {
+    List<List<String>> tags = [["k","7376"]];
+    for (var evt in events) {
+      tags.add(["e", evt]);
+    }
+    Event? event = await createEvent(
+      kind: 5, 
+      tags: tags, 
+      content: "Clear hist",
+    ); 
+    RelayPool.shared.send(event!.serialize());
+  }
+
+  Subscription fetchHistoryEvent(Function updateHistories) {
+    Subscription subscription = Subscription( 
+      filters: [Filter(
+        kinds: [7376],
+        authors: [Signer.shared.pub!],
+      )], 
+      onEvent: (events) async {
+        final List<Map<String,String>> newHistories = [];
+        await Future.forEach(events.entries, (MapEntry entry) async {
+          final event = entry.value;
+          if (event['tags'].where((e) => e[0] == 'a').toList().isEmpty) return;
+          
+          final aTag = event['tags'].where((e) => e[0] == 'a').toList()[0][1];
+          if(aTag.split(':').length < 3) return;
+          if(aTag.split(':')[2] != Nip60.shared.wallet['id']) return;
+          if (histories.where((h) => h['id'] == event['id']).isNotEmpty) return;
+          
+          final decryptMsg = jsonDecode((await Signer.shared.nip44Decrypt(event['content']))!);
+          final deletedEvent = decryptMsg.where((c) => c[0] == 'e' && c[3] == 'destroyed')
+            .map((c) => c[1]).toList();
+          newHistories.add({
+            "id": event['id'],
+            "amount": decryptMsg.where((c) => c[0] == 'amount').first[1].toString(),
+            "direction": decryptMsg.where((c) => c[0] == 'direction').first[1].toString(),
+            "time": event['created_at'].toString(),
+            "deleted": jsonEncode(deletedEvent),
+          });
+        });
+
+        histories.addAll(newHistories);
+        await updateHistories(newHistories);
+      }
+    );
+    
+    RelayPool.shared.subscribe(subscription, timeout: 3);
+    return subscription;
+  }
+
+
   Future<String> createTokenEvent(List<Proof> proofs, String mintUrl) async {
     Map<String,dynamic> content = {
       'mint': mintUrl,
@@ -223,14 +319,15 @@ class Nip60 {
     await createHistoryEvent(evtIds, rolloverEvent);
   }
 
-  Subscription fetchProofEvent() {
+  Subscription fetchTokenEvent(Function updateProofEvent) {
     Subscription subscription = Subscription( 
       filters: [Filter(
         kinds: [7375],
         authors: [Signer.shared.pub!],
       )], 
       onEvent: (events) async {
-        events.forEach((id, event) async {
+        await Future.forEach(events.entries, (MapEntry entry) async {
+          final event = entry.value;
           if (event['tags'].where((e) => e[0] == 'a').toList().isEmpty) return;
           if (proofEvents.containsKey(event['id'])) return;
           
@@ -240,6 +337,7 @@ class Nip60 {
 
           proofEvents[event['id']] = event;
         });
+        await updateProofEvent();
       }
     );
     
@@ -249,8 +347,11 @@ class Nip60 {
 
   Future<void> eventToProof() async {
     eventProofs.clear();
-    for(var id in Nip60.shared.proofEvents.keys) {
-      final event = Nip60.shared.proofEvents[id];
+    for (var mint in Cashu.shared.proofs.keys) {
+      Cashu.shared.proofs[mint]!.clear();
+    }
+    for(var id in proofEvents.keys) {
+      final event = proofEvents[id];
       dynamic decryptMsg = jsonDecode((await Signer.shared.nip44Decrypt(event['content']))!);
       
       if (Cashu.shared.mints.where((mint) => mint.mintURL == decryptMsg['mint']).isEmpty) {
@@ -273,94 +374,5 @@ class Nip60 {
         } 
       }
     }
-  }
-
-  Future<void> createHistoryEvent(List<String> createdEvt, List<String> destroyedEvt) async {
-    final content = <List<String>>[];
-    int amount = 0;
-    for (var evt in createdEvt) {
-      content.add(["e", evt, RelayPool.shared.getRelayURL().first, "created"]);
-      amount += eventProofs[evt]!.totalAmount;
-    }
-    for (var evt in destroyedEvt) {
-      content.add(["e", evt, RelayPool.shared.getRelayURL().first, "destroyed"]);
-      amount -= eventProofs[evt]!.totalAmount;
-    }
-    if (amount > 0) {
-      content.add(["direction", "in"]);
-      content.add(["amount", "$amount", "sat"]);
-    }
-    else {
-      content.add(["direction", "out"]);
-      content.add(["amount", "${-amount}", "sat"]);
-    }
-
-    await deleteTokenEvent(destroyedEvt);
-
-    String? encryptedContent = await Signer.shared.nip44Encrypt(jsonEncode(content));
-
-    List<List<String>> tags = [];
-    tags.add(['a', '37375:${Signer.shared.pub}:${wallet['id']}']);
-
-    Event? event = await createEvent(
-      kind: 7376, 
-      tags: tags, 
-      content: encryptedContent!,
-    );
-    
-    RelayPool.shared.send(event!.serialize());
-    histories.insert(0, {
-      "id": event.id,
-      "amount": amount.abs().toString(),
-      "direction": amount > 0 ? "in" : "out",
-      "time": event.createdAt.toString(),
-      "deleted": jsonEncode(destroyedEvt),
-    });
-  }
-
-  Future<void> deleteHistEvent(List<String> events) async {
-    List<List<String>> tags = [["k","7376"]];
-    for (var evt in events) {
-      tags.add(["e", evt]);
-    }
-    Event? event = await createEvent(
-      kind: 5, 
-      tags: tags, 
-      content: "Clear hist",
-    ); 
-    RelayPool.shared.send(event!.serialize());
-  }
-
-  Subscription fetchHistoryEvent() {
-    Subscription subscription = Subscription( 
-      filters: [Filter(
-        kinds: [7376],
-        authors: [Signer.shared.pub!],
-      )], 
-      onEvent: (events) async {
-        events.forEach((id, event) async {
-          if (event['tags'].where((e) => e[0] == 'a').toList().isEmpty) return;
-          
-          final aTag = event['tags'].where((e) => e[0] == 'a').toList()[0][1];
-          if(aTag.split(':').length < 3) return;
-          if(aTag.split(':')[2] != Nip60.shared.wallet['id']) return;
-          if (histories.where((h) => h['id'] == event['id']).isNotEmpty) return;
-          
-          final decryptMsg = jsonDecode((await Signer.shared.nip44Decrypt(event['content']))!);
-          final deletedEvent = decryptMsg.where((c) => c[0] == 'e' && c[3] == 'destroyed')
-            .map((c) => c[1]).toList();
-          histories.add({
-            "id": event['id'],
-            "amount": decryptMsg.where((c) => c[0] == 'amount').first[1].toString(),
-            "direction": decryptMsg.where((c) => c[0] == 'direction').first[1].toString(),
-            "time": event['created_at'].toString(),
-            "deleted": jsonEncode(deletedEvent),
-          });
-        });
-      }
-    );
-    
-    RelayPool.shared.subscribe(subscription, timeout: 3);
-    return subscription;
   }
 }

@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lnwcash/utils/nip07.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:animate_do/animate_do.dart';
@@ -52,11 +53,6 @@ class _WalletPage extends State<WalletPage> with CashuListener {
   Completer popUp = Completer();
 
   num balance = 0;
-  
-  // List<Map<String,String>> wallets = [];
-  // Map<String,String> wallet = {'balance': '0','mints': '[]'};
-  
-  List<Map<String,dynamic>> proofs = [];
 
   @override
   void initState() {
@@ -75,15 +71,22 @@ class _WalletPage extends State<WalletPage> with CashuListener {
 
   void initRelay() async {
     List<String> prefsRelays = widget.prefs.getStringList('relays') ?? [];
+    context.loaderOverlay.show();
     for (String url in prefsRelays)
     {
       await RelayPool.shared.add(url);
     }
-    if (prefsRelays.isEmpty) {
+    // ignore: use_build_context_synchronously
+    context.loaderOverlay.hide();
+
+    if (RelayPool.shared.getRelayURL().isEmpty) {
+      // ignore: use_build_context_synchronously
+      context.loaderOverlay.show();
       await RelayPool.shared.add('wss://relay.siamstr.com');
       await RelayPool.shared.add('wss://relay.notoshi.win');
-    }
-    if (prefsRelays.isEmpty) {
+      // ignore: use_build_context_synchronously
+      context.loaderOverlay.hide();
+
       // ignore: use_build_context_synchronously
       await relayManager(context);
     }
@@ -172,7 +175,7 @@ class _WalletPage extends State<WalletPage> with CashuListener {
                       onPressed: () async {
                         mintManager(context).then((_) {
                           Nip60.shared.wallet['mints'] =  jsonEncode(Cashu.shared.mints.map((m) => m.mintURL).toList());
-                          _fetchProofEvent(isInit: false);  
+                          _loadProofs(isInit: false);  
                         });
                       },
                       iconSize: 27,
@@ -207,8 +210,8 @@ class _WalletPage extends State<WalletPage> with CashuListener {
       ),
       drawer: getDrawer(context, 
         prefs:  widget.prefs,
-        fetchWalletEvent: _fetchWalletEvent,
-        fetchProofEvent: _fetchProofEvent,
+        fetchWallet: _fetchWalletEvent,
+        loadProofs: _loadProofs,
         version: version,
       ),
       // bottomNavigationBar: Container(
@@ -316,8 +319,8 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     _callSnackBar(context, errorMsg);
   }
 
+
   Future<void> _fetchWalletEvent({bool isInit = true}) async {
-    context.loaderOverlay.show();
     Nip60.shared.wallet.clear();
 
     String walletStr = widget.prefs.getString('wallet') ?? '';
@@ -325,14 +328,17 @@ class _WalletPage extends State<WalletPage> with CashuListener {
       Nip60.shared.wallet = Map.castFrom(jsonDecode(walletStr));
     } else {
       Subscription subscription = Nip60.shared.fetchWalletEvent();
-      await subscription.timeout.future;
-      RelayPool.shared.unsubscribe(subscription.id);
+      
+      context.loaderOverlay.show();
+      await subscription.finish.future;
       // ignore: use_build_context_synchronously
       context.loaderOverlay.hide();
+      RelayPool.shared.unsubscribe(subscription.id);
       
       if (Nip60.shared.wallet.isEmpty || !isInit) {
         // ignore: use_build_context_synchronously
         await walletManager(context);
+        widget.prefs.setString('wallet', jsonEncode(Nip60.shared.wallet));
       }
     }
 
@@ -359,12 +365,13 @@ class _WalletPage extends State<WalletPage> with CashuListener {
       context.loaderOverlay.hide();
     }
     Nip60.shared.wallet['mints'] =  jsonEncode(Cashu.shared.mints.map((m) => m.mintURL).toList());
-    _fetchHistoryEvent(isInit: isInit);
+    _loadProofs(isInit: isInit);
   }
 
-  Future<void> _fetchHistoryEvent({bool isInit = true}) async {
+  Future<void> _loadProofs({bool isInit = true}) async {
     if (!isInit) {
       widget.prefs.setString('history', '');
+      widget.prefs.setString('proofs', '');
     }
 
     Nip60.shared.histories.clear();
@@ -377,24 +384,6 @@ class _WalletPage extends State<WalletPage> with CashuListener {
         }
       }
     }
-    // Get history event from relays
-    context.loaderOverlay.show();
-    Subscription subscription = Nip60.shared.fetchHistoryEvent();
-    await subscription.timeout.future;
-    // RelayPool.shared.unsubscribe(subscription.id);
-    // ignore: use_build_context_synchronously
-    context.loaderOverlay.hide();
-
-    widget.prefs.setString('history', jsonEncode(Nip60.shared.histories));
-
-    _fetchProofEvent(isInit: isInit);
-  }
-
-  Future<void> _fetchProofEvent({bool isInit = true}) async {
-
-    if (!isInit) {
-      widget.prefs.setString('proofs', '');
-    }
 
     Nip60.shared.proofEvents.clear();    
     String proofEvts = widget.prefs.getString('proofs') ?? '';
@@ -402,27 +391,7 @@ class _WalletPage extends State<WalletPage> with CashuListener {
       // Get proof event from local storage
       for (var id in jsonDecode(proofEvts).keys) {
         final evt = jsonDecode(proofEvts)[id];
-        //send proof event to relays if it is not in relays
-        // if(!Nip60.shared.proofEvents.containsKey(id)) { 
-        //   RelayPool.shared.send('["EVENT",${jsonEncode(evt)}]');
-        // }
         Nip60.shared.proofEvents[id] = evt;
-      }
-    }
-    // Get proof event from relays 
-    context.loaderOverlay.show();
-    Subscription subscription = Nip60.shared.fetchProofEvent();
-    await subscription.timeout.future;
-    // RelayPool.shared.unsubscribe(subscription.id);
-    // ignore: use_build_context_synchronously
-    context.loaderOverlay.hide();
-
-    // Check deleted proofs from history
-    for (final hist in Nip60.shared.histories) {
-      for (final evtId in jsonDecode(hist['deleted']!)) {
-        if (Nip60.shared.proofEvents.containsKey(evtId)) {
-          await Nip60.shared.deleteTokenEvent([evtId]);
-        }
       }
     }
 
@@ -439,9 +408,73 @@ class _WalletPage extends State<WalletPage> with CashuListener {
       }
       Nip60.shared.wallet['balance'] = balance.toString();
     });
+
+    _fetchProofs();
+  }
+
+  Future<void> _fetchProofs() async {
+    if (Nip60.shared.histories.isEmpty || Nip60.shared.proofEvents.isEmpty) {
+      context.loaderOverlay.show();
+    }
+
+    // Get history event from relays
+    Subscription histSubscription = Nip60.shared.fetchHistoryEvent((newHist) async {
+      // update local histories
+      Nip60.shared.histories.sort((t1,t2) => t2['time']!.compareTo(t1['time']!));
+      widget.prefs.setString('history', jsonEncode(Nip60.shared.histories));
+      
+      // Check deleted proofs from history
+      for (final hist in newHist) {
+        // Nip60.shared.deleteHistEvent([hist['id']]);
+        for (final evtId in jsonDecode(hist['deleted']!)) {
+          if (Nip60.shared.proofEvents.containsKey(evtId)) {
+            await Nip60.shared.deleteTokenEvent([evtId]);
+          }
+        }
+      }
+    });
+    await histSubscription.finish.future;
+    RelayPool.shared.unsubscribe(histSubscription.id);
     
-    widget.prefs.setString('wallet', jsonEncode(Nip60.shared.wallet));
-    Nip60.shared.updateWallet();
+    // Get proof event from relays
+    Subscription tokenSubscription = Nip60.shared.fetchTokenEvent(() async {
+      // Check deleted proofs from history
+      for (final hist in Nip60.shared.histories) {
+        for (final evtId in jsonDecode(hist['deleted']!)) {
+          if (Nip60.shared.proofEvents.containsKey(evtId)) {
+            await Nip60.shared.deleteTokenEvent([evtId]);
+          }
+        }
+      }
+
+      // //update all proof events to local storage
+      widget.prefs.setString('proofs', jsonEncode(Nip60.shared.proofEvents));
+    }); 
+    await tokenSubscription.finish.future;   
+    RelayPool.shared.unsubscribe(tokenSubscription.id); 
+    
+    await Nip60.shared.eventToProof();
+
+    bool balanceChange = false;
+    setState(() {
+      balance = 0;
+      for (IMint mint in Cashu.shared.mints) {
+        mint.balance = Cashu.shared.proofs[mint]!.totalAmount;
+        balance += mint.balance; 
+      }
+      if (Nip60.shared.wallet['balance'] != balance.toString()) {
+        Nip60.shared.wallet['balance'] = balance.toString();
+        balanceChange = true;
+      }
+    });
+    
+    // ignore: use_build_context_synchronously
+    context.loaderOverlay.hide();
+
+    if (balanceChange) {
+      widget.prefs.setString('wallet', jsonEncode(Nip60.shared.wallet));
+      Nip60.shared.updateWallet();
+    }
   }
 
   _onReceive () async {
