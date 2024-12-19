@@ -5,9 +5,7 @@ import 'package:nostr_core_dart/nostr.dart';
 
 
 getTransactionHistory(context){
-  return Container(
-    height: MediaQuery.of(context).size.height - 530, //621
-    padding: const EdgeInsets.only(left: 15, right: 15),
+  return Expanded(
     child: ListView(
       scrollDirection: Axis.vertical,
       children: List.generate(Nip60.shared.histories.length, 
@@ -39,10 +37,10 @@ class TransactionView extends StatelessWidget {
     }
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 8, right: 2),
+      margin: const EdgeInsets.only(bottom: 8, left: 15, right: 15),
       padding: const EdgeInsets.only(top: 16, bottom: 16, left: 32, right: 32),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer.withOpacity(1),
+        color: Theme.of(context).colorScheme.secondaryContainer,
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(

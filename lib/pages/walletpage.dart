@@ -53,6 +53,8 @@ class _WalletPage extends State<WalletPage> with CashuListener {
 
   num balance = 0;
 
+  int _currentPageIndex = 0;
+
   @override
   void initState() {
     super.initState();
@@ -100,152 +102,150 @@ class _WalletPage extends State<WalletPage> with CashuListener {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            stops: const [.0, 1],
-            colors: [
-              Theme.of(context).colorScheme.surfaceContainerHighest,
-              Theme.of(context).colorScheme.surfaceContainerLowest,
-            ],
+      body: <Widget>[
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              stops: const [.0, 1],
+              colors: [
+                Theme.of(context).colorScheme.surfaceContainerHighest,
+                Theme.of(context).colorScheme.surfaceContainerLowest,
+              ],
+            ),
           ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.only(top: 10, bottom: 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 5,),
-              ProfileCard(prefs: widget.prefs,),
-              const SizedBox(height: 25,),
-              FadeIn(
-                child: Center(
-                  child: Text('Current Balance', 
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.secondary, 
-                      fontSize: 18
-                    ),
-                  )
-                ),
-              ),
-              FadeIn(
-                child: Center(
-                  child: Text('$balance sat', 
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontSize: 45, 
-                      fontWeight: FontWeight.bold, 
-                      fontFamily: ''
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 25,),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  FadeInLeft(
-                    child:_sendreceive(context, 
-                      title: 'Receive', 
-                      icon: Icon(IconlyLight.arrow_down, size: 30, color: Theme.of(context).colorScheme.secondary,),
-                      onPreesed: _onReceive,
-                    )
-                  ),
-                  const SizedBox(width:16,),
-                  FadeInRight(
-                    child:_sendreceive(context, 
-                      title: 'Send', 
-                      icon: Icon(IconlyLight.arrow_up, size: 30, color: Theme.of(context).colorScheme.secondary,),
-                      onPreesed: _onSend,
-                    )
-                  ),
-                ],
-              ),
-              const SizedBox(height: 25,),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 15),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text("Mints", style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600),),
-                    IconButton(
-                      onPressed: () async {
-                        mintManager(context).then((_) {
-                          Nip60.shared.wallet['mints'] =  jsonEncode(Cashu.shared.mints.map((m) => m.mintURL).toList());
-                          _loadProofs(isInit: false);  
-                        });
-                      },
-                      iconSize: 27,
-                      icon: Icon(Icons.add_circle_outline, 
-                        color: Theme.of(context).colorScheme.primary,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 10, bottom: 10),
+            child: Column(
+              children: [
+                const SizedBox(height: 5,),
+                ProfileCard(prefs: widget.prefs,),
+                SizedBox(height: MediaQuery.of(context).size.height/4,),
+                FadeIn(
+                  child: Center(
+                    child: Text('Current Balance', 
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.secondary, 
+                        fontSize: 18
                       ),
                     )
-                  ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 15,),
-              getMintCards(context),
-              const SizedBox(height: 25,),
-              Container(
-                padding: const EdgeInsets.only(left: 15, right: 15),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                FadeIn(
+                  child: Center(
+                    child: Text('$balance sat', 
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontSize: 45, 
+                        fontWeight: FontWeight.bold, 
+                        fontFamily: ''
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 25,),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text("Transaction History", style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600),),
-                    // TextButton(
-                    //   onPressed: () => {}, 
-                    //   child: const Text("view all"),
-                    // )
+                    FadeInLeft(
+                      child:_sendreceive(context, 
+                        title: 'Receive', 
+                        icon: Icon(IconlyLight.arrow_down, size: 30, color: Theme.of(context).colorScheme.secondary,),
+                        onPreesed: _onReceive,
+                      )
+                    ),
+                    const SizedBox(width:16,),
+                    FadeInRight(
+                      child:_sendreceive(context, 
+                        title: 'Send', 
+                        icon: Icon(IconlyLight.arrow_up, size: 30, color: Theme.of(context).colorScheme.secondary,),
+                        onPreesed: _onSend,
+                      )
+                    ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 15,),
-              getTransactionHistory(context),
-            ],
+                const SizedBox(height: 25,),
+                // Container(
+                //   padding: const EdgeInsets.symmetric(horizontal: 20),
+                //   child: Row(
+                //     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                //     children: [
+                //       Text("Mints", style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600),),
+                //       IconButton(
+                //         onPressed: () async {
+                //           mintManager(context).then((_) {
+                //             Nip60.shared.wallet['mints'] =  jsonEncode(Cashu.shared.mints.map((m) => m.mintURL).toList());
+                //             _loadProofs(isInit: false);  
+                //           });
+                //         },
+                //         iconSize: 27,
+                //         icon: Icon(Icons.add_circle_outline, 
+                //           color: Theme.of(context).colorScheme.primary,
+                //         ),
+                //       )
+                //     ],
+                //   ),
+                // ),
+                // const SizedBox(height: 15,),
+                // getMintCards(context),
+              ],
+            ),
           ),
         ),
-      ),
+        Column(
+          children: [
+            const SizedBox(height: 25,),
+            Text("Transaction History", style: TextStyle(fontSize: 18, color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600),),
+            const SizedBox(height: 25,),
+            getTransactionHistory(context),
+          ]
+        )
+      ][_currentPageIndex],
       drawer: getDrawer(context, 
         prefs:  widget.prefs,
         fetchWallet: _fetchWalletEvent,
         loadProofs: _loadProofs,
         version: version,
       ),
-      // bottomNavigationBar: Container(
-      //   decoration: BoxDecoration(
-      //     boxShadow: [
-      //       BoxShadow(color: Theme.of(context).colorScheme.primary, spreadRadius: 0, blurRadius: 8),
-      //     ],
-      //   ),
-      //   child: BottomNavigationBar(
-      //     showSelectedLabels: false,
-      //     showUnselectedLabels: false,
-      //     backgroundColor: Theme.of(context).colorScheme.onPrimary,
-      //     selectedItemColor: Theme.of(context).colorScheme.primary,
-      //     unselectedItemColor: Theme.of(context).colorScheme.secondary,
-      //     currentIndex: 0,
-      //     type: BottomNavigationBarType.fixed,
-      //     elevation: 0,
-      //     items: const <BottomNavigationBarItem>[
-      //       BottomNavigationBarItem(
-      //         icon: Icon(
-      //           IconlyLight.home,
-      //           size: 25,
-      //         ),
-      //         label: '',
-      //       ),
-      //       BottomNavigationBarItem(
-      //         icon: Icon(
-      //           IconlyLight.chat,
-      //           size: 25,
-      //         ),
-      //         label: '',
-      //       ),
-      //     ]
-      //   ),
-      // ),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(color: Theme.of(context).colorScheme.primary, spreadRadius: 0, blurRadius: 8),
+          ],
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _currentPageIndex,
+          onTap: (int index) {
+            setState(() {
+              _currentPageIndex = index;
+            });
+          },
+          type: BottomNavigationBarType.fixed,
+          elevation: 0,
+          items: const <BottomNavigationBarItem>[
+            BottomNavigationBarItem(
+              icon: Icon(
+                Icons.wallet,
+                size: 25,
+              ),
+              label: 'Wallet',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(
+                Icons.format_list_bulleted,
+                size: 25,
+              ),
+              label: 'History',
+            ),
+          ],
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {},
+        child: const Icon(Icons.qr_code_scanner, size: 42,),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
 

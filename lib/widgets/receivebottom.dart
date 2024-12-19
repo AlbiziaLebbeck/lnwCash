@@ -207,7 +207,7 @@ class _ReceiveButtomSheet extends State<ReceiveButtomSheet> {
                     Cashu.shared.mints.length,
                     (idx) => DropdownMenuItem(
                       value: Cashu.shared.mints[idx].mintURL, 
-                      child: Text(Cashu.shared.mints[idx].mintURL),
+                      child: Text('${Cashu.shared.mints[idx].name} (${Cashu.shared.proofs[Cashu.shared.mints[idx]]!.totalAmount} sat)'),
                     ),
                   ),
                   onChanged: (value) {

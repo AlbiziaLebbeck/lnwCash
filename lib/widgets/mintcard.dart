@@ -7,7 +7,7 @@ import 'package:lnwcash/utils/cashu.dart';
 
 getMintCards(BuildContext context){
   return SingleChildScrollView(
-    padding: const EdgeInsets.only(bottom: 5, left: 15),
+    padding: const EdgeInsets.only(bottom: 5, left: 20),
     scrollDirection: Axis.horizontal,
     child: Row(
       children: List.generate(Cashu.shared.mints.length, 

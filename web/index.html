@@ -56,14 +56,6 @@
         xmlhttp.send();
       });
     }
-
-    window.addEventListener("visibilitychange", function () {
-      console.log("Visibility changed");
-      if (document.visibilityState === "visible") {
-        console.log("APP resumed");
-        window.location.reload();
-      }
-    });
   </script>
   <script src="flutter_bootstrap.js" async></script>
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>

@@ -146,7 +146,7 @@ class _SendButtomSheet extends State<SendButtomSheet> {
                     Cashu.shared.mints.length,
                     (idx) => DropdownMenuItem(
                       value: Cashu.shared.mints[idx].mintURL, 
-                      child: Text('${Cashu.shared.mints[idx].mintURL} (${Cashu.shared.proofs[Cashu.shared.mints[idx]]!.totalAmount} sat)'),
+                      child: Text('${Cashu.shared.mints[idx].name} (${Cashu.shared.proofs[Cashu.shared.mints[idx]]!.totalAmount} sat)'),
                     ),
                   ),
                   onChanged: (value) {
@@ -363,7 +363,7 @@ class _PayQuoteDialog extends State<PayQuoteDialog> {
               widget.quotes.length,
               (idx) => DropdownMenuItem(
                 value: widget.quotes.keys.toList()[idx], 
-                child: Text(widget.quotes.keys.toList()[idx].mintURL),
+                child: Text(widget.quotes.keys.toList()[idx].name),
               ),
             ),
             onChanged: (value) {
