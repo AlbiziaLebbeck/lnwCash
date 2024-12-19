@@ -79,8 +79,6 @@ class RelayPool {
     final subId = message[1];
     Subscription? subscription = _subscriptions[subId];
     if (subscription != null) {
-      print(relay);
-      print(message);
       if (messageType == 'EVENT')
       {
         final event = message[2];

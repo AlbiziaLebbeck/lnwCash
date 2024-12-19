@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:bolt11_decoder/bolt11_decoder.dart';
 
@@ -165,17 +166,41 @@ class Cashu {
     List<BlindedMessage> blindedMessages = [];
     List<String> secrets = [];
     List<BigInt> rs = [];
-    final ( $1, $2, $3, _ ) = DHKEHelper.createBlindedMessages(
-      keysetId: keysetInfo!.id,
-      amount: amount,
-    );
-    blindedMessages.addAll($1);
-    secrets.addAll($2);
-    rs.addAll($3);
+
+    if (supportAmount == null) {
+      for (int i = 32; i > 0; i--) {
+        if (pow(2, i).toInt() - 1 <= amount) {
+          final ( $1, $2, $3, _ ) = DHKEHelper.createBlindedMessages(
+            keysetId: keysetInfo!.id,
+            amount: pow(2, i).toInt() - 1,
+          );
+          blindedMessages.addAll($1);
+          secrets.addAll($2);
+          rs.addAll($3);
+
+          final ( $4, $5, $6, _ ) = DHKEHelper.createBlindedMessages(
+            keysetId: keysetInfo.id,
+            amount: amount - pow(2, i).toInt() + 1,
+          );
+          blindedMessages.addAll($4);
+          secrets.addAll($5);
+          rs.addAll($6);
+          break;
+        }
+      }
+    } else {
+      final ( $1, $2, $3, _ ) = DHKEHelper.createBlindedMessages(
+        keysetId: keysetInfo!.id,
+        amount: amount,
+      );
+      blindedMessages.addAll($1);
+      secrets.addAll($2);
+      rs.addAll($3);
+    }
     
     if (proofsTotalAmount - amount > 0) {
       final ( $1, $2, $3, _ ) = DHKEHelper.createBlindedMessages(
-        keysetId: keysetInfo.id,
+        keysetId: keysetInfo!.id,
         amount: proofsTotalAmount - amount,
       );
       blindedMessages.addAll($1);

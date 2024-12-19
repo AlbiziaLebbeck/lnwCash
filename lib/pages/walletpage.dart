@@ -3,7 +3,6 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:lnwcash/utils/nip07.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:animate_do/animate_do.dart';
@@ -44,7 +43,7 @@ class WalletPage extends StatefulWidget {
 
 class _WalletPage extends State<WalletPage> with CashuListener {
 
-  String version = '0.0.9';
+  String version = '0.0.10';
 
   late final String pub;
   late final String priv;

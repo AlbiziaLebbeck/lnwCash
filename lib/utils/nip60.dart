@@ -313,9 +313,12 @@ class Nip60 {
       }
     });
 
-    if (unspendProofs.isNotEmpty) evtIds.add(await createTokenEvent(unspendProofs, mintUrl));
-    if (outProofs.isNotEmpty) evtIds.add(await createTokenEvent(outProofs, mintUrl));
-    
+    // if (unspendProofs.isNotEmpty) evtIds.add(await createTokenEvent(unspendProofs, mintUrl));
+    // if (outProofs.isNotEmpty) evtIds.add(await createTokenEvent(outProofs, mintUrl));
+    if (unspendProofs.isNotEmpty || outProofs.isNotEmpty) {
+      evtIds.add(await createTokenEvent([...unspendProofs, ...outProofs], mintUrl));
+    }
+
     await createHistoryEvent(evtIds, rolloverEvent);
   }
 
