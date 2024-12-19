@@ -43,7 +43,7 @@ class MintCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(mintData.mintURL, overflow: TextOverflow.ellipsis, 
+          Text(mintData.name, overflow: TextOverflow.ellipsis, 
             style: TextStyle(
               fontSize: 12, 
               fontWeight: FontWeight.w600,

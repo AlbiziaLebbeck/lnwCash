@@ -86,14 +86,15 @@ class Nip60 {
         authors: [Signer.shared.pub!],
       )], 
       onEvent: (events) async {
-        events.forEach((id, event) async {
+        await Future.forEach(events.entries, (MapEntry entry) async {
+          final event = entry.value;
           if (event['tags'].where((e) => e[0] == 'deleted').toList().isNotEmpty) return;
           if (event['tags'].where((e) => e[0] == 'd').toList().isEmpty) return;
 
           String walletId = event['tags'].where((e) => e[0] == 'd').toList()[0][1];
           var sameId = wallets.where((w) => w['id'] == walletId).toList();
           if (sameId.isNotEmpty) {
-            if(int.parse(sameId[0]['created_at']!) > event['created_at']) {
+            if(int.parse(sameId[0]['created_at']!) >= event['created_at']) {
               return;
             }
             else {

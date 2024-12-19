@@ -45,7 +45,16 @@ class LoginPage extends StatelessWidget {
                 ),
               ),
               FadeInLeft(
-                child: Text('Lightning & Nostr Wallet for Ecash', 
+                child: Text('Empower Your Satoshi with Ecash', 
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary, 
+                    fontSize: 16,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              FadeInLeft(
+                child: Text('Simple, Private, and Secure', 
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.primary, 
                     fontSize: 16,

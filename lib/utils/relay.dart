@@ -90,8 +90,8 @@ class RelayPool {
         }
       } else if (messageType == 'EOSE') {
         if (!subscription.getEOSE) {
-          await subscription.onEvent(subscription.events);
           subscription.getEOSE = true;
+          await subscription.onEvent(subscription.events);
           if (!subscription.finish.isCompleted) subscription.finish.complete();
         }
       }
