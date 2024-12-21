@@ -53,6 +53,7 @@ dependencies:
   flutter_settings_screens: ^0.3.4
   provider: ^6.1.2
   bech32: ^0.2.2
+  intl: ^0.20.1
 
 dev_dependencies:
   flutter_test:

@@ -162,7 +162,7 @@ class Nip60 {
   }
 
 
-  Future<void> createHistoryEvent(List<String> createdEvt, List<String> destroyedEvt) async {
+  Future<void> createHistoryEvent(List<String> createdEvt, List<String> destroyedEvt, {String type = "", String detail = ""}) async {
     final content = <List<String>>[];
     int amount = 0;
     for (var evt in createdEvt) {
@@ -202,6 +202,8 @@ class Nip60 {
       "direction": amount > 0 ? "in" : "out",
       "time": event.createdAt.toString(),
       "deleted": jsonEncode(destroyedEvt),
+      "type": type,
+      "detail": detail,
     });
   }
 
@@ -244,6 +246,8 @@ class Nip60 {
             "direction": decryptMsg.where((c) => c[0] == 'direction').first[1].toString(),
             "time": event['created_at'].toString(),
             "deleted": jsonEncode(deletedEvent),
+            "type": "",
+            "detail": "",
           });
         });
 
@@ -302,7 +306,11 @@ class Nip60 {
     RelayPool.shared.send(event!.serialize());
   }
 
-  Future<void> rollOverTokenEvent(List<Proof> inProofs, List<Proof> outProofs, String mintUrl) async {
+  Future<(List<String>,List<String>)> rollOverTokenEvent(
+    List<Proof> inProofs, 
+    List<Proof> outProofs, 
+    String mintUrl
+  ) async {
     List<String> evtIds = [];
     List<String> rolloverEvent = [];
     List<Proof> unspendProofs = [];
@@ -320,7 +328,8 @@ class Nip60 {
       evtIds.add(await createTokenEvent([...unspendProofs, ...outProofs], mintUrl));
     }
 
-    await createHistoryEvent(evtIds, rolloverEvent);
+    return (evtIds, rolloverEvent);
+    // await createHistoryEvent(evtIds, rolloverEvent);
   }
 
   Subscription fetchTokenEvent(Function updateProofEvent) {

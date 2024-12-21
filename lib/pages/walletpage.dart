@@ -506,7 +506,7 @@ class _WalletPage extends State<WalletPage> with CashuListener {
       // ignore: use_build_context_synchronously
       context.loaderOverlay.show();
     }  
-    popUp.complete();
+    if (!popUp.isCompleted) popUp.complete();
   }
 
   _onSend () async {

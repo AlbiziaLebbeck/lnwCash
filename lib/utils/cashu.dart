@@ -43,6 +43,7 @@ class Cashu {
   Completer _invoiceCreated = Completer();
   Completer invoicePaid = Completer();
 
+  String _lastPR = '';
   final _quotes = <IMint,MeltQuotePayload>{};
   Completer _quoteCreated = Completer();
 
@@ -142,7 +143,8 @@ class Cashu {
         );
 
         _updateProofs(newProofs!, mint);
-        await Nip60.shared.rollOverTokenEvent(currentProofs, newProofs, mint.mintURL);
+        final (createEvt, detroyedEvent) = await Nip60.shared.rollOverTokenEvent(currentProofs, newProofs, mint.mintURL);
+        await Nip60.shared.createHistoryEvent(createEvt, detroyedEvent, type: 'ecash', detail: Nut0.encodedToken(token));
         for (final proof in currentProofs) {
           proofs[mint]!.remove(proof);
         }
@@ -287,8 +289,8 @@ class Cashu {
         invoicePaid.complete();
         final newProofs = constructProofs(mint, response.data, secrets, rs);
         _updateProofs(newProofs, mint);
-        final evtId = await Nip60.shared.createTokenEvent(newProofs, mint.mintURL);
-        await Nip60.shared.createHistoryEvent([evtId], []);
+        final (createEvt, detroyedEvent) = await Nip60.shared.rollOverTokenEvent([], newProofs, mint.mintURL);
+        await Nip60.shared.createHistoryEvent(createEvt, detroyedEvent, type: 'lightning', detail: invoice.request);
         notifyListenerForPaidSuccess(invoice);
       }
       _invoices.remove(invoice);
@@ -354,21 +356,23 @@ class Cashu {
       sendingProofs.addAll([...usedProofs]);
     }
 
-    if (change.isNotEmpty) {
-      _updateProofs(change, mint);
-    }
-
-    await Nip60.shared.rollOverTokenEvent(usedProofs, change, mint.mintURL);
-    for (final proof in usedProofs) {
-      proofs[mint]!.remove(proof);
-    }
-
     final ecash = Nut0.encodedToken(
       Token(
         entries: [TokenEntry(mint: mint.mintURL, proofs: sendingProofs)],
         unit: "sat",
       ),
     );
+
+    if (change.isNotEmpty) {
+      _updateProofs(change, mint);
+    }
+
+    final (createEvt, detroyedEvent) = await Nip60.shared.rollOverTokenEvent(usedProofs, change, mint.mintURL);
+    await Nip60.shared.createHistoryEvent(createEvt, detroyedEvent, type: 'ecash', detail: ecash);
+    for (final proof in usedProofs) {
+      proofs[mint]!.remove(proof);
+    }
+
     _ecashToken.add(ecash);
     _ecashCreated.complete();
 
@@ -426,6 +430,8 @@ class Cashu {
     }
     if (availableMint.isEmpty) return "Mint balance is insufficient";
     
+    _lastPR = req.paymentRequest;
+
     requestQuote(availableMint, req);
     return null;
   }
@@ -516,7 +522,8 @@ class Cashu {
       _updateProofs(change, mint);
     }
 
-    await Nip60.shared.rollOverTokenEvent(usedProofs, change, mint.mintURL);
+    final (createEvt, detroyedEvent) = await Nip60.shared.rollOverTokenEvent(usedProofs, change, mint.mintURL);
+    await Nip60.shared.createHistoryEvent(createEvt, detroyedEvent, type: 'lightning', detail: _lastPR);
     for (final proof in usedProofs) {
       proofs[mint]!.remove(proof);
     }
