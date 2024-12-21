@@ -61,11 +61,11 @@ class TransactionView extends StatelessWidget {
                   ),
                   content: SizedBox(
                     width: 320,
-                    height: transactionData['detail'] == '' ? 115 : 400,
+                    height: transactionData['detail'] == '' ? 110 : 450,
                     child: Column(children: [
                       Text('${transactionData['amount']!} sat',
                         style: TextStyle(
-                          fontSize: 36, 
+                          fontSize: 32,
                           fontWeight: FontWeight.w600,
                           color: Theme.of(context).colorScheme.secondary
                         ),
@@ -73,7 +73,8 @@ class TransactionView extends StatelessWidget {
                       const SizedBox(height: 15,),
                       Text(DateFormat('E, d MMM y - H:mm').format(dt),
                         style: TextStyle(
-                          fontSize: 16, 
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
                           color: Theme.of(context).colorScheme.secondary
                         ),
                       ),
@@ -83,7 +84,7 @@ class TransactionView extends StatelessWidget {
                         QrImageView(
                           data: transactionData['detail']!,
                           version: QrVersions.auto,
-                          size: 250.0,
+                          size: 300.0,
                           eyeStyle: QrEyeStyle(
                             eyeShape: QrEyeShape.square,
                             color: Theme.of(context).colorScheme.onSurface
@@ -99,6 +100,7 @@ class TransactionView extends StatelessWidget {
                         Text('${transactionData['detail']!.substring(0,21)}...',
                           style: TextStyle(
                             fontSize: 16, 
+                            fontWeight: FontWeight.w600,
                             color: Theme.of(context).colorScheme.secondary
                           ),
                         ),
@@ -114,16 +116,19 @@ class TransactionView extends StatelessWidget {
                               // ignore: use_build_context_synchronously
                               _callSnackBar(context, "Copy to clipboard!");
                             }, 
-                            child: const Text('Copy', style: TextStyle(fontSize: 16))
+                            child: const Text('Copy', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600))
                           ),
                         const Expanded(child: SizedBox(height: 10,)),
                         TextButton(
                           onPressed: () {Navigator.of(context).pop();}, 
-                          child: const Text('Close', style: TextStyle(fontSize: 16))
+                          child: const Text('Close', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600))
                         ),
                       ]
                     ),
                   ],
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(20)),
+                  ),
                 )
               ),
             ),

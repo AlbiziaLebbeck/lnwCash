@@ -1,13 +1,18 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:bech32/bech32.dart';
+import 'package:cashu_dart/utils/network/http_client.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:qrcode_reader_web/qrcode_reader_web.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:iconly/iconly.dart';
 import 'package:loader_overlay/loader_overlay.dart';
+// ignore: implementation_imports
+import 'package:bolt11_decoder/src/word_reader.dart';
 
 import 'package:cashu_dart/core/nuts/nut_00.dart';
 import 'package:cashu_dart/model/invoice.dart';
@@ -22,7 +27,6 @@ import 'package:lnwcash/utils/cashu.dart';
 
 import 'package:lnwcash/widgets/profilecard.dart';
 import 'package:lnwcash/widgets/transactionview.dart';
-import 'package:lnwcash/widgets/mintcard.dart';
 import 'package:lnwcash/widgets/receivebottom.dart';
 import 'package:lnwcash/widgets/sendbottom.dart';
 import 'package:lnwcash/widgets/sidebar.dart';
@@ -54,6 +58,8 @@ class _WalletPage extends State<WalletPage> with CashuListener {
   num balance = 0;
 
   int _currentPageIndex = 0;
+
+  bool _scanDetected = false;
 
   @override
   void initState() {
@@ -242,7 +248,80 @@ class _WalletPage extends State<WalletPage> with CashuListener {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {},
+        onPressed: () {
+          _scanDetected = false;
+          showDialog(context: context,
+            builder: (context) => QRCodeReaderTransparentWidget(
+              onDetect: (QRCodeCapture capture) async {
+                if (!_scanDetected) {
+                  _scanDetected = true;
+
+                  String captureText = capture.raw;
+
+                  // _ecashController.text = capture.raw;
+                  final token = Nut0.decodedToken(captureText);// TokenHelper.getDecodedToken(value);
+                  if (token != null) {
+                    Cashu.shared.redeemEcash(token: token);
+                    context.loaderOverlay.show();
+                  }
+
+                  if (captureText.startsWith('lightning:')) {
+                    captureText = capture.raw.substring('lightning:'.length);
+                  }
+
+                  if (Cashu.shared.payingLightningInvoice(capture.raw) == null) {
+                    Navigator.of(context).pop('lightning');
+                    return;
+                  }
+
+                  if (captureText.toLowerCase().startsWith('lnurl')) {
+                    final bech32 = const Bech32Codec().decode(
+                      captureText,
+                      2000,
+                    );
+                    var data = WordReader(bech32.data);
+                    final url = utf8.decode(data.read(data.words.length*5)); 
+                    final response = await HTTPClient.get(
+                      url.substring(0, url.length - 1),
+                      modelBuilder: (json) {
+                        if (json is !Map) return null; 
+                        return json;
+                      },
+                    );
+                    if (response.isSuccess) {
+                      // ignore: use_build_context_synchronously
+                      final lnurl = await showDialog(context: context,
+                        builder: (context) => PayLNAddressDialog(captureText, response.data),
+                      );
+
+                      if (lnurl != null) {
+                        Cashu.shared.payingLightningInvoice(lnurl);
+                        // ignore: use_build_context_synchronously
+                        Navigator.of(context).pop('lightning');
+                        return;
+                      }
+                    }
+                  }
+                  // ignore: use_build_context_synchronously
+                  Navigator.of(context).pop();
+                }
+              },
+            ),
+          ).then((value) async {
+            if (value == null) return;
+
+            final quotes = await Cashu.shared.getLastestQuote();
+            // ignore: use_build_context_synchronously
+            showDialog(context: context,
+              builder: (context) => PayQuoteDialog(quotes),
+            ).then((value) {
+              if (value == "paying") {
+                // ignore: use_build_context_synchronously
+                context.loaderOverlay.show();
+              }
+            });
+          });
+        },
         child: const Icon(Icons.qr_code_scanner, size: 42,),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
@@ -378,6 +457,7 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     if (history != '') {
       // Get history event from local storage
       for (var hist in jsonDecode(history)) {
+        // Nip60.shared.deleteHistEvent([hist['id']]);
         if (Nip60.shared.histories.where((e) => e['id'] == hist['id']).isEmpty) {
           Nip60.shared.histories.add(Map.castFrom(hist));
         }
@@ -424,7 +504,6 @@ class _WalletPage extends State<WalletPage> with CashuListener {
       
       // Check deleted proofs from history
       for (final hist in newHist) {
-        // Nip60.shared.deleteHistEvent([hist['id']]);
         for (final evtId in jsonDecode(hist['deleted']!)) {
           if (Nip60.shared.proofEvents.containsKey(evtId)) {
             await Nip60.shared.deleteTokenEvent([evtId]);
@@ -601,23 +680,38 @@ class _WalletPage extends State<WalletPage> with CashuListener {
       builder: (context) => Scaffold(
         backgroundColor: Colors.transparent,
         body: AlertDialog(
-          title: Text(title),
-          content: SizedBox(
-            width: 300.0,
-            height: 300.0,
-            child: QrImageView(
-              data: data,
-              version: QrVersions.auto,
-              size: 200.0,
-              eyeStyle: QrEyeStyle(
-                eyeShape: QrEyeShape.square,
-                color: Theme.of(context).colorScheme.onSurface
-              ),
-              dataModuleStyle: QrDataModuleStyle(
-                dataModuleShape: QrDataModuleShape.square,
-                color: Theme.of(context).colorScheme.onSurface
-              ),
+          title: Text(title,
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              color: Theme.of(context).colorScheme.primary
             ),
+          ),
+          content: SizedBox(
+            width: 320.0,
+            height: 350.0,
+            child: Column(children: [ 
+              QrImageView(
+                data: data,
+                version: QrVersions.auto,
+                size: 300.0,
+                eyeStyle: QrEyeStyle(
+                  eyeShape: QrEyeShape.square,
+                  color: Theme.of(context).colorScheme.onSurface
+                ),
+                dataModuleStyle: QrDataModuleStyle(
+                  dataModuleShape: QrDataModuleShape.square,
+                  color: Theme.of(context).colorScheme.onSurface
+                ),
+              ),
+              const SizedBox(height: 15,),
+              Text('${data.substring(0,21)}...',
+                style: TextStyle(
+                  fontSize: 16, 
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.secondary
+                ),
+              ),
+            ]),
           ),
           actions: [
             Row(
@@ -628,12 +722,12 @@ class _WalletPage extends State<WalletPage> with CashuListener {
                     // ignore: use_build_context_synchronously
                     _callSnackBar(context, "Copy to clipboard!");
                   }, 
-                  child: const Text('Copy', style: TextStyle(fontSize: 16))
+                  child: const Text('Copy', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600))
                 ),
                 const Expanded(child: SizedBox(height: 10,)),
                 TextButton(
                   onPressed: () {Navigator.of(context).pop();}, 
-                  child: const Text('Close', style: TextStyle(fontSize: 16))
+                  child: const Text('Close', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600))
                 ),
               ]
             ),
