@@ -31,7 +31,6 @@ import 'package:lnwcash/widgets/receivebottom.dart';
 import 'package:lnwcash/widgets/sendbottom.dart';
 import 'package:lnwcash/widgets/sidebar.dart';
 
-import 'package:lnwcash/widgets/relaymanager.dart';
 import 'package:lnwcash/widgets/walletmanager.dart';
 import 'package:lnwcash/widgets/mintmanager.dart';
 
@@ -70,39 +69,21 @@ class _WalletPage extends State<WalletPage> with CashuListener {
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await Signer.shared.initialize(priv);
-      initRelay(); 
+      
+      List<String> initRelays = widget.prefs.getStringList('relays') ?? [
+        'wss://relay.siamstr.com',
+        'wss://relay.notoshi.win',
+        'wss://relay.damus.io',
+        'wss://nos.lol'
+      ];
+      await RelayPool.shared.init(initRelays);
+      widget.prefs.setStringList('relays', RelayPool.shared.getRelayURL());
+
+      await _fetchWalletEvent();
+      Cashu.shared.initialize(widget.prefs);
     });
 
     Cashu.shared.addListener(this);
-  }
-
-  void initRelay() async {
-    List<String> prefsRelays = widget.prefs.getStringList('relays') ?? [];
-    context.loaderOverlay.show();
-    for (String url in prefsRelays)
-    {
-      await RelayPool.shared.add(url);
-    }
-    // ignore: use_build_context_synchronously
-    context.loaderOverlay.hide();
-
-    if (RelayPool.shared.getRelayURL().isEmpty) {
-      // ignore: use_build_context_synchronously
-      context.loaderOverlay.show();
-      await RelayPool.shared.add('wss://relay.siamstr.com');
-      await RelayPool.shared.add('wss://relay.notoshi.win');
-      // ignore: use_build_context_synchronously
-      context.loaderOverlay.hide();
-
-      // ignore: use_build_context_synchronously
-      await relayManager(context);
-    }
-
-    widget.prefs.setStringList('relays', RelayPool.shared.getRelayURL());
-
-    await _fetchWalletEvent();
-    
-    Cashu.shared.initialize(widget.prefs);
   }
 
   @override
@@ -172,28 +153,6 @@ class _WalletPage extends State<WalletPage> with CashuListener {
                   ],
                 ),
                 const SizedBox(height: 25,),
-                // Container(
-                //   padding: const EdgeInsets.symmetric(horizontal: 20),
-                //   child: Row(
-                //     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                //     children: [
-                //       Text("Mints", style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600),),
-                //       IconButton(
-                //         onPressed: () async {
-                //           mintManager(context).then((_) {
-                //             Nip60.shared.wallet['mints'] =  jsonEncode(Cashu.shared.mints.map((m) => m.mintURL).toList());
-                //             _loadProofs(isInit: false);  
-                //           });
-                //         },
-                //         iconSize: 27,
-                //         icon: Icon(Icons.add_circle_outline, 
-                //           color: Theme.of(context).colorScheme.primary,
-                //         ),
-                //       )
-                //     ],
-                //   ),
-                // ),
-                // const SizedBox(height: 15,),
                 // getMintCards(context),
               ],
             ),
@@ -394,7 +353,7 @@ class _WalletPage extends State<WalletPage> with CashuListener {
   @override
   void handleError(String errorMsg) {
     context.loaderOverlay.hide();
-    _callSnackBar(context, errorMsg);
+    _callSnackBar(context, errorMsg, error: true);
   }
 
 
@@ -644,10 +603,11 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     );
   }
 
-  void _callSnackBar(BuildContext context, String text) {
+  void _callSnackBar(BuildContext context, String text, {bool error = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(text),
+        backgroundColor: error ? Colors.red : Theme.of(context).snackBarTheme.backgroundColor,
+        content: Text(text, style: TextStyle(color: error ? Colors.white : Theme.of(context).primaryColor)),
         duration: const Duration(seconds: 3),
         width: 200, // Width of the SnackBar.
         behavior: SnackBarBehavior.floating,
@@ -661,7 +621,7 @@ class _WalletPage extends State<WalletPage> with CashuListener {
   void _callTransactionSnackBar(BuildContext context, String method, int amount) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        backgroundColor: amount > 0 ?Colors.green : Colors.red,
+        backgroundColor: amount > 0 ? Colors.green : Colors.red,
         content: Text("${amount > 0 ? "Receive" : "Send"} ${amount.abs()} sat via $method", 
           style: const TextStyle(color: Colors.white),
         ),

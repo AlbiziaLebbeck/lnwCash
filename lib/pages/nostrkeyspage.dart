@@ -30,7 +30,7 @@ class _NostrKeyPage extends State<NostrKeyPage> {
               title: 'Public Key (npub)',
               children: <Widget>[
                 Padding(
-                  padding: const EdgeInsets.all(15),
+                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
                   child: TextFormField(
                     initialValue: widget.npub,
                     readOnly: true,

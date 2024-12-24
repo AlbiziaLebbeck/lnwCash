@@ -54,6 +54,8 @@ class Cashu {
 
   late SharedPreferences prefs;
 
+  String _errorMsg = 'Mint is disconnected';
+
   Future<void> initialize(SharedPreferences prefs) async {
     this.prefs = prefs;
     final preInvoices = prefs.getStringList('invoice');
@@ -150,7 +152,7 @@ class Cashu {
         }
         notifyListenerForBalanceChanged(mint);
       } catch (_) {
-        notifyError('Error: Mint is disconnected');
+        notifyError(_errorMsg);
         return;
       }
     }
@@ -219,7 +221,7 @@ class Cashu {
     if (response.isSuccess) {
       return constructProofs(mint, response.data, secrets, rs);
     }
-
+    _errorMsg = response.errorMsg;
     return null;
   }
 
@@ -234,7 +236,7 @@ class Cashu {
       amount: amount,
     );
     if (!response.isSuccess) {
-      notifyError('Error: Mint is disconnected');
+      notifyError(response.errorMsg);
       return null;
     }
 
@@ -447,7 +449,7 @@ class Cashu {
       if (quoteResponse.isSuccess && quoteResponse.data.quote.isNotEmpty) {
         _quotes[mint] = quoteResponse.data;
       } else {
-        notifyError('Error: Mint is disconnected');
+        notifyError(quoteResponse.errorMsg);
         return;
       }
     }

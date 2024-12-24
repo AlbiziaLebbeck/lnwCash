@@ -10,7 +10,7 @@ import 'package:lnwcash/pages/appearancepage.dart';
 
 import 'package:lnwcash/widgets/avatar_image.dart';
 import 'package:lnwcash/widgets/mintmanager.dart';
-import 'package:lnwcash/widgets/relaymanager.dart';
+import 'package:lnwcash/pages/relaypage.dart';
 
 import 'package:lnwcash/utils/cashu.dart';
 import 'package:lnwcash/utils/nip60.dart';
@@ -86,7 +86,9 @@ Drawer getDrawer(BuildContext context, {
           onTap: () {
             // Update the state of the app.
             Navigator.of(context).pop();
-            relayManager(context);
+            Navigator.push(context,
+              MaterialPageRoute(builder: (context) => RelayPage(prefs: prefs)),
+            );
           },
         ),
         nsec != 'nsec1jlrw3c' ? ListTile(

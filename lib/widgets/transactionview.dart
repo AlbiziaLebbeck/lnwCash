@@ -137,7 +137,7 @@ class TransactionView extends StatelessWidget {
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 8, left: 15, right: 15),
-        padding: const EdgeInsets.only(top: 8, bottom: 8, left: 25, right: 25),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 25),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.primaryContainer,
           borderRadius: BorderRadius.circular(16),

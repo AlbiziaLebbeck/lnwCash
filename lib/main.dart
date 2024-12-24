@@ -6,7 +6,6 @@ import 'package:loader_overlay/loader_overlay.dart';
 import 'package:lnwcash/pages/loginpage.dart';
 import 'package:lnwcash/pages/walletpage.dart';
 
-
 void main() {
   runApp(const MyApp());
 }

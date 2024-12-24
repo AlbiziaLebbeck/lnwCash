@@ -14,8 +14,22 @@ class RelayPool {
 
   final Map<String, Subscription> _subscriptions = {};
 
+  Future<void> init(List<String> initRelays) async {
+    var connecting = Completer();
+    for(var relayURL in initRelays) {
+      RelayPool.shared.add(relayURL).then((_) {
+        if (!connecting.isCompleted) connecting.complete();
+      });
+    }
+    await connecting.future;
+  }
+
   List<String> getRelayURL() {
     return _relays.keys.toList();
+  }
+
+  bool getRelayConnection(String relayURL) {
+    return _relays[relayURL]!.isConnected;
   }
 
   Future<bool> add(String url) async {
@@ -25,9 +39,9 @@ class RelayPool {
 
     Relay relay = Relay(url);
     relay.onMessage = _onEvent;
+    _relays[relay.url] = relay;
 
     if (await relay.connect()) {
-      _relays[relay.url] = relay;
       for (Subscription subscription in _subscriptions.values) {
         relay.send(subscription.request());
       }
@@ -63,6 +77,7 @@ class RelayPool {
     bool hadSubmitSend = false;
     
     for (Relay relay in _relays.values) {
+      if (!relay.isConnected) continue;
       bool result = relay.send(message);
       if (result) {
         hadSubmitSend = true;
@@ -105,6 +120,7 @@ class Relay{
   final String url;
 
   WebSocket? webSocket;
+  bool isConnected = false;
 
   List<dynamic> pendingMessages = [];
 
@@ -140,6 +156,7 @@ class Relay{
   disconnect() {
     webSocket?.close();
     webSocket = null;
+    isConnected = false;
   }
 
   bool send(String message){
@@ -159,6 +176,7 @@ class Relay{
   
   Future onConnected() async {
     _connecting.complete();
+    isConnected = true;
     print('Connected from relay: ${url}');
     for (var message in pendingMessages){
       send(message);
