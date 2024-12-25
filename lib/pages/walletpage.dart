@@ -393,8 +393,7 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     final dynamic mints = jsonDecode(Nip60.shared.wallet['mints']!);
     if (mints.isEmpty) {
       await Cashu.shared.addMint('https://mint.lnw.cash');
-      // ignore: use_build_context_synchronously
-      await mintManager(context);
+      // await mintManager(context);
     } else {
       context.loaderOverlay.show();
       await Cashu.shared.setupMints(mints);

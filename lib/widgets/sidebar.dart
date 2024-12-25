@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:lnwcash/pages/mintpage.dart';
 import 'package:nostr_core_dart/nostr.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -69,10 +70,13 @@ Drawer getDrawer(BuildContext context, {
           title: const Text('Mints'),
           onTap: () {
             Navigator.of(context).pop();
-            mintManager(context).then((_) {
-              Nip60.shared.wallet['mints'] =  jsonEncode(Cashu.shared.mints.map((m) => m.mintURL).toList());
-              loadProofs(isInit: false);
-            });
+            Navigator.push(context,
+              MaterialPageRoute(builder: (context) => const MintPage()),
+            );
+            // mintManager(context).then((_) {
+            //   Nip60.shared.wallet['mints'] =  jsonEncode(Cashu.shared.mints.map((m) => m.mintURL).toList());
+            //   loadProofs(isInit: false);
+            // });
           },
         ),
         const Divider(),
@@ -84,7 +88,6 @@ Drawer getDrawer(BuildContext context, {
           leading: const Icon(Icons.dns),
           title: const Text('Relays'),
           onTap: () {
-            // Update the state of the app.
             Navigator.of(context).pop();
             Navigator.push(context,
               MaterialPageRoute(builder: (context) => RelayPage(prefs: prefs)),

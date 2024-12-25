@@ -1,41 +1,37 @@
 import 'package:animate_do/animate_do.dart';
+import 'package:cashu_dart/core/nuts/nut_00.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_settings_screens/flutter_settings_screens.dart';
+import 'package:lnwcash/utils/cashu.dart';
 import 'package:lnwcash/utils/relay.dart';
 import 'package:lnwcash/utils/subscription.dart';
 import 'package:nostr_core_dart/nostr.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-
-class RelayPage extends StatefulWidget {
-  const RelayPage({super.key, required this.prefs});
-
-  final SharedPreferences prefs;
+class MintPage extends StatefulWidget {
+  const MintPage({super.key});
 
   @override
-  State<RelayPage> createState() => _RelatPage();
+  State<MintPage> createState() => _MintPage();
 }
 
-class _RelatPage extends State<RelayPage>{
+class _MintPage extends State<MintPage> {
   final _formKey = GlobalKey<FormState>();
-  final List<String> recommendedRelays = [];
+
+  final List<String> recommendedMints = [];
 
   @override
   void initState() {
     super.initState();
-    _fetchRecommendedRelays();
+    _fetchRecommendedMints();
   }
 
   @override
   Widget build(BuildContext context) {
-
-    List<String> relaysURL = RelayPool.shared.getRelayURL();
-
     return SettingsScreen(
-      title: 'Relays',
+      title: 'Mints',
       children: [
         SettingsGroup(
-          title: 'Connected Relays',
+          title: 'Connected Mints',
           children: [
             Padding(
               padding: const EdgeInsets.only(top: 15, bottom: 5, left: 15, right: 15),
@@ -45,7 +41,7 @@ class _RelatPage extends State<RelayPage>{
                   children: [
                     Expanded(child: 
                       TextFormField(
-                        initialValue: "wss://",
+                        initialValue: "https://",
                         style: const TextStyle(fontSize: 14),
                         decoration: InputDecoration(
                           enabledBorder: OutlineInputBorder(
@@ -58,21 +54,34 @@ class _RelatPage extends State<RelayPage>{
                           label: const Text('Add New Relay'),
                         ),
                         validator: (value) { 
-                          if (value == null || value.isEmpty || value == 'wss://') {
-                            return "Relay url is required";
+                          if (value == null || value.isEmpty || value == 'https://') {
+                            return "Mint url is required";
                           }
 
-                          if (relaysURL.contains(value)) {
-                            return "This relay is already added";
+                          if (!value.startsWith('https://')) {
+                            return "Mint url is invalid";
                           }
 
-                          setState(() {
-                            RelayPool.shared.add(value).then((_) {
+                          if (Cashu.shared.mints.where((e) => e.mintURL == value).isNotEmpty) {
+                            return "This mint is already added";
+                          }
+
+                          Cashu.shared.addMint(value).then((isAdded) {
+                            if (isAdded) {
                               setState(() {});
-                            });
-                            widget.prefs.setStringList('relays', RelayPool.shared.getRelayURL());
+                            } else {
+                              // ignore: use_build_context_synchronously
+                              showDialog(context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('Error!'),
+                                  content: const Text('This mint is not found.'),
+                                  actions: [
+                                    TextButton(onPressed: () {Navigator.of(context).pop();}, child: const Text('OK')),
+                                  ],
+                                )
+                              );
+                            }
                           });
-
                           return null;
                         },
                       ),
@@ -94,7 +103,7 @@ class _RelatPage extends State<RelayPage>{
                 ),
               ),
             ),
-            ...List.generate(relaysURL.length, 
+            ...List.generate(Cashu.shared.mints.length, 
               (index) => Container(
                 margin: const EdgeInsets.only(top: 8, left: 15, right: 15),
                 padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 15),
@@ -112,19 +121,35 @@ class _RelatPage extends State<RelayPage>{
                 ),
                 child: Row(
                   children: [
-                    RelayPool.shared.getRelayConnection(relaysURL[index]) ?
-                      const Icon(Icons.check_circle, size: 24, color: Colors.green,):
-                      const Icon(Icons.sync, size: 24, color: Colors.orange,),
-                    const SizedBox(width: 10),
-                    Expanded(child: Text(relaysURL[index], 
-                          style: TextStyle(
-                          fontSize: 14, 
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.secondary
-                        ),
+                    Expanded(child:
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(Cashu.shared.mints[index].name, 
+                            style: TextStyle(
+                              fontSize: 14, 
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.secondary
+                            ),
+                          ),
+                          Text(Cashu.shared.mints[index].mintURL, 
+                            style: TextStyle(
+                              fontSize: 12, 
+                              fontWeight: FontWeight.w500,
+                              color: Theme.of(context).colorScheme.secondary
+                            ),
+                          )
+                        ]
                       )
                     ),
                     const SizedBox(width: 5),
+                    Text('${Cashu.shared.proofs[Cashu.shared.mints[index]]!.totalAmount} sat',
+                      style: TextStyle(
+                        fontSize: 15, 
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.secondary
+                      ),
+                    ),
                     IconButton(
                       onPressed: () {
                         showDialog(context: context,
@@ -136,9 +161,8 @@ class _RelatPage extends State<RelayPage>{
                               FilledButton(onPressed: () {
                                 Navigator.of(context).pop();
                                 setState(() {
-                                  if (RelayPool.shared.getRelayConnection(relaysURL[index])) recommendedRelays.add(relaysURL[index]);
-                                  RelayPool.shared.remove(relaysURL[index]);
-                                  widget.prefs.setStringList('relays', RelayPool.shared.getRelayURL());
+                                  recommendedMints.add(Cashu.shared.mints[index].mintURL);
+                                  Cashu.shared.mints.remove(Cashu.shared.mints[index]);
                                 });
                               }, child: const Text('Confirm')),
                             ],
@@ -155,8 +179,8 @@ class _RelatPage extends State<RelayPage>{
         ),
         const SizedBox(height: 10),
         SettingsGroup(
-          title: 'Recommended Relays',
-          children: List.generate(recommendedRelays.length, 
+          title: 'Recommended Mints',
+          children: List.generate(recommendedMints.length, 
             (index) => FadeInUp(
               child: Container(
                 margin: const EdgeInsets.only(top: 8, left: 15, right: 15),
@@ -175,7 +199,7 @@ class _RelatPage extends State<RelayPage>{
                 ),
                 child: Row(
                   children: [
-                    Expanded(child: Text(recommendedRelays[index], 
+                    Expanded(child: Text(recommendedMints[index], 
                           style: TextStyle(
                           fontSize: 14, 
                           fontWeight: FontWeight.w600,
@@ -186,11 +210,10 @@ class _RelatPage extends State<RelayPage>{
                     const SizedBox(width: 5),
                     IconButton(
                       onPressed: () {
-                        RelayPool.shared.add(recommendedRelays[index]).then((_) {
-                          setState(() {});
+                        Cashu.shared.addMint(recommendedMints[index]).then((_) {
+                              setState(() {});
                         });
-                        recommendedRelays.removeAt(index);
-                        widget.prefs.setStringList('relays', RelayPool.shared.getRelayURL());
+                        recommendedMints.removeAt(index);
                       }, 
                       icon: Icon(Icons.add_circle, size: 24, color: Theme.of(context).colorScheme.primary),
                     )
@@ -204,16 +227,16 @@ class _RelatPage extends State<RelayPage>{
     );
   }
 
-  _fetchRecommendedRelays () async {
+  _fetchRecommendedMints() async {
     Subscription subscription = Subscription(
-      filters: [Filter(kinds: [10002], limit: 1)],
+      filters: [Filter(kinds: [38172], limit: 50)],
       onEvent: (events) async {
-        final relayList = RelayPool.shared.getRelayURL();
         setState(() {
-          for (var relay in events[events.keys.first]['tags']) {
-            if(relayList.contains(relay[1])) continue;
-            recommendedRelays.add(relay[1]);
-          }          
+          for (var mintevent in events.keys) {
+            final mintURL = events[mintevent]['tags'].where((t) => t[0] == 'u').first[1];
+            if (Cashu.shared.mints.where((m) => m.mintURL == mintURL).isNotEmpty) continue;
+            recommendedMints.add(mintURL);
+          }       
         });
       }
     );

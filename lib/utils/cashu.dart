@@ -83,16 +83,16 @@ class Cashu {
     final maxNutsVersion = await MintHelper.getMaxNutsVersion(mintURL);
     
     IMint mint = IMint(mintURL: mintURL, maxNutsVersion: maxNutsVersion);
-    proofs[mint] = <Proof>[];
-    mints.add(mint);
 
     if (maxNutsVersion <= 0) return false;
-    
     final response = await mint.requestMintInfoAction(mintURL: mint.mintURL);
     if (!response.isSuccess) return false;
+
     mint.info = response.data;
     if (mint.name.isEmpty) mint.name = response.data.name;
 
+    proofs[mint] = <Proof>[];
+    mints.add(mint);
     keysets[mint] = await KeysetHelper.fetchKeysetFromRemote(mint);
     
     return true;

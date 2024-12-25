@@ -14,7 +14,7 @@ class Subscription {
 
   final Map<String,Object> events = {};
   final Completer finish = Completer();
-  bool getEOSE = false;
+  int countEOSE = 0;
 
   String request() {
     Request request = Request(id, filters);

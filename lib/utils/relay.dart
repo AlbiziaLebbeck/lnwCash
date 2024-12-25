@@ -14,6 +14,8 @@ class RelayPool {
 
   final Map<String, Subscription> _subscriptions = {};
 
+  int _numConnectedRelay = 0;
+
   Future<void> init(List<String> initRelays) async {
     var connecting = Completer();
     for(var relayURL in initRelays) {
@@ -42,6 +44,7 @@ class RelayPool {
     _relays[relay.url] = relay;
 
     if (await relay.connect()) {
+      _numConnectedRelay += 1;
       for (Subscription subscription in _subscriptions.values) {
         relay.send(subscription.request());
       }
@@ -53,6 +56,7 @@ class RelayPool {
   void remove(String url) {
     _relays[url]?.disconnect();
     _relays.remove(url);
+    _numConnectedRelay -= 1;
   }
 
   String subscribe(Subscription subscription, {int timeout = 0}) {
@@ -60,7 +64,7 @@ class RelayPool {
     send(subscription.request());
     if (timeout > 0) {
       Future.delayed(Duration(seconds: timeout), () {
-        if (!subscription.getEOSE) subscription.finish.complete();
+        if (!subscription.finish.isCompleted) subscription.finish.complete();
       });
     }
     return subscription.id;
@@ -75,14 +79,17 @@ class RelayPool {
 
   bool send(dynamic message){
     bool hadSubmitSend = false;
+    int relayCheck = 0;
     
     for (Relay relay in _relays.values) {
       if (!relay.isConnected) continue;
       bool result = relay.send(message);
       if (result) {
         hadSubmitSend = true;
+        relayCheck += 1;
       }
     }
+    _numConnectedRelay = relayCheck;
     
     return hadSubmitSend;
   }
@@ -99,13 +106,13 @@ class RelayPool {
         final event = message[2];
         if (!subscription.events.containsKey(event['id'])){
           subscription.events[event['id']] = event;
-          if (subscription.getEOSE) {
+          if (subscription.finish.isCompleted) {
             subscription.onEvent({event['id']: event});
           }
         }
       } else if (messageType == 'EOSE') {
-        if (!subscription.getEOSE) {
-          subscription.getEOSE = true;
+        subscription.countEOSE += 1;
+        if (subscription.countEOSE >= _numConnectedRelay) {
           await subscription.onEvent(subscription.events);
           if (!subscription.finish.isCompleted) subscription.finish.complete();
         }
