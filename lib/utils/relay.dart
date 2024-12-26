@@ -70,7 +70,11 @@ class RelayPool {
     _subscriptions[subscription.id] = subscription;
     send(subscription.request());
     if (timeout > 0) {
-      Future.delayed(Duration(seconds: timeout), () {
+      Future.delayed(Duration(seconds: timeout), () async {
+        if (subscription.events.isNotEmpty) {
+          await subscription.onEvent(subscription.events);
+          subscription.events.clear();
+        }
         if (!subscription.finish.isCompleted) subscription.finish.complete();
       });
     }
@@ -102,7 +106,6 @@ class RelayPool {
 
   Future<void> _onEvent(String relay, String eventData) async {
     dynamic message = jsonDecode(eventData);
-    print(message);
     
     final messageType = message[0];
     final subId = message[1];
@@ -120,7 +123,10 @@ class RelayPool {
       } else if (messageType == 'EOSE') {
         subscription.countEOSE += 1;
         if (subscription.countEOSE >= _numConnectedRelay && _numConnectedRelay > 0) {
-          if (subscription.events.isNotEmpty) await subscription.onEvent(subscription.events);
+          if (subscription.events.isNotEmpty) {
+            await subscription.onEvent(subscription.events);
+            subscription.events.clear();
+          }
           if (!subscription.finish.isCompleted) subscription.finish.complete();
         }
       }

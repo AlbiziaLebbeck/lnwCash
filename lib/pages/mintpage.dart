@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:animate_do/animate_do.dart';
 import 'package:cashu_dart/core/nuts/nut_00.dart';
 import 'package:flutter/material.dart';
@@ -17,7 +19,7 @@ class MintPage extends StatefulWidget {
 class _MintPage extends State<MintPage> {
   final _formKey = GlobalKey<FormState>();
 
-  final List<String> recommendedMints = [];
+  final Map<String,int> recommendedMints = {};
 
   @override
   void initState() {
@@ -161,7 +163,6 @@ class _MintPage extends State<MintPage> {
                               FilledButton(onPressed: () {
                                 Navigator.of(context).pop();
                                 setState(() {
-                                  recommendedMints.add(Cashu.shared.mints[index].mintURL);
                                   Cashu.shared.mints.remove(Cashu.shared.mints[index]);
                                 });
                               }, child: const Text('Confirm')),
@@ -181,46 +182,50 @@ class _MintPage extends State<MintPage> {
         SettingsGroup(
           title: 'Recommended Mints',
           children: List.generate(recommendedMints.length, 
-            (index) => FadeInUp(
-              child: Container(
-                margin: const EdgeInsets.only(top: 8, left: 15, right: 15),
-                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 15),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black87.withOpacity(0.2),
-                      spreadRadius: 1,
-                      blurRadius: 1,
-                      offset: const Offset(1, 1), // changes position of shadow
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Expanded(child: Text(recommendedMints[index], 
+            (index) {
+              String mintURL = recommendedMints.keys.toList()[index];
+              return FadeInUp(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 8, left: 15, right: 15),
+                  padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 15),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black87.withOpacity(0.2),
+                        spreadRadius: 1,
+                        blurRadius: 1,
+                        offset: const Offset(1, 1), // changes position of shadow
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(mintURL, 
                           style: TextStyle(
-                          fontSize: 14, 
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.secondary
+                            fontSize: 14, 
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.secondary
+                          ),
                         ),
+                      ),
+                      const SizedBox(width: 5),
+                      IconButton(
+                        onPressed: () {
+                          if (Cashu.shared.mints.where((mint) => mint.mintURL == mintURL).isNotEmpty) return;
+                          Cashu.shared.addMint(mintURL).then((_) {
+                                setState(() {});
+                          });
+                        }, 
+                        icon: Icon(Icons.add_circle, size: 24, color: Theme.of(context).colorScheme.primary),
                       )
-                    ),
-                    const SizedBox(width: 5),
-                    IconButton(
-                      onPressed: () {
-                        Cashu.shared.addMint(recommendedMints[index]).then((_) {
-                              setState(() {});
-                        });
-                        recommendedMints.removeAt(index);
-                      }, 
-                      icon: Icon(Icons.add_circle, size: 24, color: Theme.of(context).colorScheme.primary),
-                    )
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ),
+              );
+            }
           ),
         ),
       ],
@@ -229,13 +234,17 @@ class _MintPage extends State<MintPage> {
 
   _fetchRecommendedMints() async {
     Subscription subscription = Subscription(
-      filters: [Filter(kinds: [38172], limit: 50)],
+      filters: [Filter(kinds: [38000], limit: 50, k: ["38172"])],
       onEvent: (events) async {
+        recommendedMints.clear();
         setState(() {
           for (var mintevent in events.keys) {
             final mintURL = events[mintevent]['tags'].where((t) => t[0] == 'u').first[1];
-            if (Cashu.shared.mints.where((m) => m.mintURL == mintURL).isNotEmpty) continue;
-            recommendedMints.add(mintURL);
+            if (recommendedMints.containsKey(mintURL)) {
+              recommendedMints[mintURL]= recommendedMints[mintURL]! + 1;
+            } else {
+              recommendedMints[mintURL] = 0;
+            }
           }       
         });
       }

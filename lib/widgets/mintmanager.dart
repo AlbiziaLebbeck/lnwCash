@@ -159,7 +159,9 @@ class _MintManager extends State<MintManager>{
                   ),
                   child: Row(
                     children: [
-                      Expanded(child: Text(Cashu.shared.mints[index].mintURL, 
+                      Expanded(
+                        child: Text(
+                          Cashu.shared.mints[index].mintURL, 
                             style: TextStyle(
                             fontSize: 14, 
                             fontWeight: FontWeight.w600,
@@ -175,12 +177,15 @@ class _MintManager extends State<MintManager>{
                               title: const Text('Warning!!'),
                               content: const Text('Are you sure that you want to delete this mint?'),
                               actions: [
-                                FilledButton(onPressed: () {
-                                  setState(() {
-                                    Cashu.shared.mints.removeAt(index);
-                                  });
-                                  Navigator.of(context).pop();
-                                }, child: const Text('Yes')),
+                                FilledButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      Cashu.shared.mints.removeAt(index);
+                                    });
+                                    Navigator.of(context).pop();
+                                  }, 
+                                  child: const Text('Yes')
+                                ),
                                 TextButton(onPressed: () {Navigator.of(context).pop();}, child: const Text('No')),
                               ],
                             )
