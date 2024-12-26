@@ -32,7 +32,6 @@ import 'package:lnwcash/widgets/sendbottom.dart';
 import 'package:lnwcash/widgets/sidebar.dart';
 
 import 'package:lnwcash/widgets/walletmanager.dart';
-import 'package:lnwcash/widgets/mintmanager.dart';
 
 
 class WalletPage extends StatefulWidget {

@@ -16,7 +16,7 @@ class LoginPage extends StatelessWidget {
       backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
       body: Center(
         child: Container(
-          padding: EdgeInsets.only(left: 48, right: 48, top: MediaQuery.sizeOf(context).height / 2 - 320),
+          padding: EdgeInsets.only(left: 48, right: 48, top: MediaQuery.sizeOf(context).height / 2 - 330),
           width: 500,
           child: Column(
             children: [
@@ -30,12 +30,13 @@ class LoginPage extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 5),
+              const SizedBox(height: 30),
               FadeInLeft(
-                child: Text('Empower Your Satoshi with Ecash', 
+                child: Text('Take Control of Your Satoshi with Ecash', 
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.primary, 
                     fontSize: 16,
+                    fontWeight: FontWeight.w600,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -45,14 +46,145 @@ class LoginPage extends StatelessWidget {
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.primary, 
                     fontSize: 16,
+                    fontWeight: FontWeight.w600,
                   ),
                   textAlign: TextAlign.center,
                 ),
               ),
-              const SizedBox(height: 36,),
-              FadeInUp(child: const LoginForm()),
-              SizedBox(height: MediaQuery.of(context).viewInsets.bottom,),
+              const SizedBox(height: 30),
+              FadeInRight(
+                child: Text(
+                  'lnwCash is a Bitcoin wallet powered by ecash, which is backed by Bitcoin Lightning via the Cashu protocol.',
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary, 
+                      fontSize: 16,
+                    ),
+                    textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 30),
+              FadeInRight(
+                child: Text(
+                  'Your ecash will be privately and securely backed up in Nostr relays.',
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary, 
+                      fontSize: 16,
+                    ),
+                    textAlign: TextAlign.center,
+                ),
+              ),
+              // const SizedBox(height: 36,),
+              // FadeInUp(child: const LoginForm()),
+              const SizedBox(height: 30),
+              FadeInUp(
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    // backgroundColor: Theme.of(context).colorScheme.primaryFixedDim,
+                    minimumSize: const Size(double.infinity, 55),
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const GetStartedPage()),
+                    );
+                  },
+                  child: const Text('Get Started', style: TextStyle(fontSize: 16)),
+                ),
+              ),
             ]
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class GetStartedPage extends StatelessWidget {
+  const GetStartedPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(backgroundColor: Theme.of(context).colorScheme.surfaceContainer),
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+      body: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 42),
+          width: 500,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              FadeInDown(
+                child: Container(
+                  height: 200,
+                  decoration: const BoxDecoration(
+                    image: DecorationImage(
+                      image: AssetImage('images/logo.png'),
+                    ),
+                  ),
+                ),
+              ),
+              FadeInDown(
+                child: Text(
+                  'Already have a Nostr account?\nLogin to instantly access your wallet.',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary, 
+                    fontSize: 16, 
+                    fontWeight: FontWeight.bold
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 30),
+              FadeInRight(child: const LoginForm()),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Expanded(
+                    child: Divider(
+                      thickness: 1,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: Text('or', style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.primary)),
+                  ),
+                  const Expanded(
+                    child: Divider(
+                      thickness: 1,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'New to Nostr?',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.primary, 
+                  fontSize: 16, 
+                  fontWeight: FontWeight.bold
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 10),
+              FadeInUp(
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.secondary,
+                    minimumSize: const Size(double.infinity, 55),
+                  ),
+                  onPressed: () => {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const SignupPage()),
+                    )
+                  }, 
+                  child: const Text("Generate new Nostr account", style: TextStyle(fontSize: 16))
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -80,7 +212,6 @@ class _LoginFormState extends State<LoginForm> {
   @override
   void initState() {
     super.initState();
-
     _loadPreference();
   }
 
@@ -147,7 +278,7 @@ class _LoginFormState extends State<LoginForm> {
           const SizedBox(height: 15,),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.primaryFixedDim,
+              backgroundColor: Theme.of(context).colorScheme.primary,
               minimumSize: const Size(double.infinity, 55),
             ),
             onPressed: () {
@@ -191,19 +322,6 @@ class _LoginFormState extends State<LoginForm> {
             },
             child: const Text('Login with nip-07', style: TextStyle(fontSize: 16)),
           ),
-          const SizedBox(height: 15,),
-          TextButton(
-              style: FilledButton.styleFrom(
-                fixedSize: const Size(200, 45),
-              ),
-              onPressed: () => {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => SignupPage(prefs: prefs,)),
-                )
-              }, 
-              child: const Text("Create New Account", style: TextStyle(fontSize: 16))
-            )
         ],
       )
     );

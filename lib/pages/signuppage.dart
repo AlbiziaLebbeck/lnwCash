@@ -8,9 +8,7 @@ import 'package:lnwcash/pages/walletpage.dart';
 import 'package:nostr_core_dart/nostr.dart';
 
 class SignupPage extends StatelessWidget {
-  const SignupPage({super.key, required this.prefs});
-
-  final SharedPreferences prefs;
+  const SignupPage({super.key});
 
    @override
   Widget build(BuildContext context) {
@@ -49,7 +47,7 @@ class SignupPage extends StatelessWidget {
               ),
               const SizedBox(height: 20,),
               FadeInUp(
-                child: SignupForm(prefs: prefs,),
+                child: const SignupForm(),
               ),
             ]
           )
@@ -61,9 +59,7 @@ class SignupPage extends StatelessWidget {
 
 
 class SignupForm extends StatefulWidget {
-  const SignupForm({super.key, required this.prefs});
-
-  final SharedPreferences prefs;
+  const SignupForm({super.key});
 
   @override
   State<SignupForm> createState() => _SignupFormState();
@@ -72,7 +68,18 @@ class SignupForm extends StatefulWidget {
 class _SignupFormState extends State<SignupForm> {
   final _formKey = GlobalKey<FormState>();
 
+  late final SharedPreferences prefs;
   late Keychain keychain;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPreference();
+  }
+
+  void _loadPreference() async {
+    prefs = await SharedPreferences.getInstance();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -93,10 +100,10 @@ class _SignupFormState extends State<SignupForm> {
               context.loaderOverlay.show();
               keychain = Keychain.generate();
               context.loaderOverlay.hide();
-              widget.prefs.setString('loginType', 'nsec');
-              widget.prefs.setString('priv', keychain.private);
-              widget.prefs.setString('pub', keychain.public);
-              widget.prefs.setString('profile', '{"name":"$value","display_name":"$value"}');
+              prefs.setString('loginType', 'nsec');
+              prefs.setString('priv', keychain.private);
+              prefs.setString('pub', keychain.public);
+              prefs.setString('profile', '{"name":"$value","display_name":"$value"}');
 
               return null;
             },
@@ -104,25 +111,25 @@ class _SignupFormState extends State<SignupForm> {
           const SizedBox(height: 20,),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.primaryFixedDim,
+              backgroundColor: Theme.of(context).colorScheme.primary,
               minimumSize: const Size(double.infinity, 55),
             ),
             onPressed: () async{
               // Validate returns true if the form is valid, or false otherwise.
               if (_formKey.currentState!.validate()) {
-                var profile = widget.prefs.getString('profile') ?? '{}';
+                var profile = prefs.getString('profile') ?? '{}';
                 Event? event = await createEvent(
                   kind: 0, 
                   tags: [], 
                   content: profile,
-                  pub: widget.prefs.getString('pub'),
-                  priv: widget.prefs.getString('priv'),
+                  pub: prefs.getString('pub'),
+                  priv: prefs.getString('priv'),
                 );
                 RelayPool.shared.send(event!.serialize());
                 Navigator.pushReplacement(
                   // ignore: use_build_context_synchronously
                   context,
-                  MaterialPageRoute(builder: (context) => WalletPage(prefs: widget.prefs,)),
+                  MaterialPageRoute(builder: (context) => WalletPage(prefs: prefs,)),
                 );
               }
             },
