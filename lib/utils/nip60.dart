@@ -101,8 +101,12 @@ class Nip60 {
               wallets.remove(sameId[0]);
             }
           }
-
-          dynamic decryptMsg = jsonDecode((await Signer.shared.nip44Decrypt(event['content']))!);
+          dynamic decryptMsg = {};
+          try {
+            decryptMsg = jsonDecode((await Signer.shared.nip44Decrypt(event['content']))!);
+          } catch (_) {
+            return;
+          }
           String name = event['tags'].where((e) => e[0] == 'name').toList().isNotEmpty ?
             event['tags'].where((e) => e[0] == 'name').toList()[0][1].toString() :
             decryptMsg.where((e) => e[0] == 'name').toList()[0][1].toString();

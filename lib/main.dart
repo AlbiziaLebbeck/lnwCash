@@ -78,7 +78,7 @@ class _UserAuthenication extends State<UserAuthenication> {
     String? colorHex = Settings.getValue<String>('key-color-picker');
     widget.themeNotifier.colorScheme = colorHex != null ? 
       Color(int.parse(colorHex.replaceFirst('#', ''), radix: 16)) : 
-      Colors.orange;
+      Colors.lightBlue;
   }
   
   @override
@@ -96,7 +96,7 @@ class ThemeNotifier extends ChangeNotifier {
 
   ThemeNotifier() {
     _isDark = false;
-    _colorScheme = Colors.orange;
+    _colorScheme = Colors.lightBlue;
   }
 
   set isDark(bool value) {

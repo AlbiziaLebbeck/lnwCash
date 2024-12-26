@@ -16,34 +16,21 @@ class LoginPage extends StatelessWidget {
       backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
       body: Center(
         child: Container(
-          padding: EdgeInsets.only(left: 48, right: 48, top: 0.1*MediaQuery.sizeOf(context).height),
+          padding: EdgeInsets.only(left: 48, right: 48, top: MediaQuery.sizeOf(context).height / 2 - 320),
           width: 500,
-          // decoration: BoxDecoration(
-          //   color: Theme.of(context).colorScheme.surfaceContainer,
-          // ),
           child: Column(
-            // mainAxisAlignment: MainAxisAlignment.center,
             children: [
               FadeInDown(
                 child: Container(
-                  height: 0.3*MediaQuery.sizeOf(context).height,
+                  height: 280,
                   decoration: const BoxDecoration(
                     image: DecorationImage(
-                      image: AssetImage('images/logo.png'),
+                      image: AssetImage('images/lnwCash.png'),
                     ),
                   ),
                 ),
               ),
-              FadeInLeft(
-                child: Text('lnwCash', 
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.primary, 
-                    fontSize: 42, 
-                    fontWeight: FontWeight.bold, 
-                    fontFamily: ''
-                  ),
-                ),
-              ),
+              const SizedBox(height: 5),
               FadeInLeft(
                 child: Text('Empower Your Satoshi with Ecash', 
                   style: TextStyle(
@@ -62,7 +49,7 @@ class LoginPage extends StatelessWidget {
                   textAlign: TextAlign.center,
                 ),
               ),
-              const SizedBox(height: 42,),
+              const SizedBox(height: 36,),
               FadeInUp(child: const LoginForm()),
               SizedBox(height: MediaQuery.of(context).viewInsets.bottom,),
             ]

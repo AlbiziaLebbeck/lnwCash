@@ -142,7 +142,7 @@ class _WalletManager extends State<WalletManager>{
                           )
                         );
                       }, 
-                      icon: Icon(Icons.delete_forever, size: 32, color: Theme.of(context).colorScheme.error,),
+                      icon: Icon(Icons.remove_circle, size: 24, color: Theme.of(context).colorScheme.error,),
                     )
                   ]),
                   leading: Radio<int>(

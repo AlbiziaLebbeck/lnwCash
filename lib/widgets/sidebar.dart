@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:lnwcash/pages/mintpage.dart';
+import 'package:lnwcash/utils/relay.dart';
 import 'package:nostr_core_dart/nostr.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -10,7 +11,6 @@ import 'package:lnwcash/pages/nostrkeyspage.dart';
 import 'package:lnwcash/pages/appearancepage.dart';
 
 import 'package:lnwcash/widgets/avatar_image.dart';
-import 'package:lnwcash/widgets/mintmanager.dart';
 import 'package:lnwcash/pages/relaypage.dart';
 
 import 'package:lnwcash/utils/cashu.dart';
@@ -145,6 +145,7 @@ Drawer getDrawer(BuildContext context, {
                       Navigator.pushReplacement(context,
                         MaterialPageRoute(builder: (context) => const LoginPage()),
                       );
+                      RelayPool.shared.close();
                     }, 
                     child: const Text('Logout')
                   ),

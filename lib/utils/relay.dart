@@ -14,16 +14,14 @@ class RelayPool {
 
   final Map<String, Subscription> _subscriptions = {};
 
+  Completer _initialized = Completer();
   int _numConnectedRelay = 0;
 
   Future<void> init(List<String> initRelays) async {
-    var connecting = Completer();
     for(var relayURL in initRelays) {
-      RelayPool.shared.add(relayURL).then((_) {
-        if (!connecting.isCompleted) connecting.complete();
-      });
+      await RelayPool.shared.add(relayURL);
     }
-    await connecting.future;
+    _initialized.complete();
   }
 
   List<String> getRelayURL() {
@@ -59,7 +57,16 @@ class RelayPool {
     _numConnectedRelay -= 1;
   }
 
-  String subscribe(Subscription subscription, {int timeout = 0}) {
+  void close() {
+    for (var relayURL in [..._relays.keys]) {
+      remove(relayURL);
+    }
+    _initialized = Completer();
+    _subscriptions.clear();
+  }
+
+  Future<void> subscribe(Subscription subscription, {int timeout = 0}) async {
+    await _initialized.future;
     _subscriptions[subscription.id] = subscription;
     send(subscription.request());
     if (timeout > 0) {
@@ -67,7 +74,6 @@ class RelayPool {
         if (!subscription.finish.isCompleted) subscription.finish.complete();
       });
     }
-    return subscription.id;
   }
 
   void unsubscribe(String id) {
@@ -112,7 +118,7 @@ class RelayPool {
         }
       } else if (messageType == 'EOSE') {
         subscription.countEOSE += 1;
-        if (subscription.countEOSE >= _numConnectedRelay) {
+        if (subscription.countEOSE >= _numConnectedRelay && _numConnectedRelay > 0) {
           await subscription.onEvent(subscription.events);
           if (!subscription.finish.isCompleted) subscription.finish.complete();
         }
