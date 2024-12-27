@@ -219,8 +219,10 @@ class _WalletPage extends State<WalletPage> with CashuListener {
                   // _ecashController.text = capture.raw;
                   final token = Nut0.decodedToken(captureText);// TokenHelper.getDecodedToken(value);
                   if (token != null) {
+                    Navigator.of(context).pop();
                     Cashu.shared.redeemEcash(token: token);
                     context.loaderOverlay.show();
+                    return;
                   }
 
                   if (captureText.startsWith('lightning:')) {

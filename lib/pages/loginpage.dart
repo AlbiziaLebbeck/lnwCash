@@ -22,7 +22,7 @@ class LoginPage extends StatelessWidget {
             children: [
               FadeInDown(
                 child: Container(
-                  height: 250,
+                  height: 200,
                   decoration: const BoxDecoration(
                     image: DecorationImage(
                       image: AssetImage('images/lnwCash.png'),
@@ -30,7 +30,7 @@ class LoginPage extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 20),
               FadeInLeft(
                 child: Text('Take Control of Your Satoshi with Ecash', 
                   style: TextStyle(
@@ -41,7 +41,7 @@ class LoginPage extends StatelessWidget {
                   textAlign: TextAlign.center,
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 30),
               FadeInRight(
                 child: Text(
                   'LnwCash is a custodial wallet that holds your funds with ecash, a bearer token fully backed by Bitcoin through the Lightning Network and the Cashu protocol.',
@@ -52,7 +52,7 @@ class LoginPage extends StatelessWidget {
                     textAlign: TextAlign.center,
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 30),
               FadeInRight(
                 child: Text(
                   'This wallet ensures privacy and security in payments while allowing seamless backup of your ecash in Nostr relays.',
@@ -65,7 +65,7 @@ class LoginPage extends StatelessWidget {
               ),
               // const SizedBox(height: 36,),
               // FadeInUp(child: const LoginForm()),
-              const SizedBox(height: 20),
+              const SizedBox(height: 30),
               FadeInUp(
                 child: FilledButton(
                   style: FilledButton.styleFrom(
