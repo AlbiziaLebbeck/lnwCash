@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:animate_do/animate_do.dart';
 import 'package:cashu_dart/core/nuts/nut_00.dart';
 import 'package:flutter/material.dart';

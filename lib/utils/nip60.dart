@@ -241,7 +241,12 @@ class Nip60 {
           if(aTag.split(':')[2] != Nip60.shared.wallet['id']) return;
           if (histories.where((h) => h['id'] == event['id']).isNotEmpty) return;
           
-          final decryptMsg = jsonDecode((await Signer.shared.nip44Decrypt(event['content']))!);
+          dynamic decryptMsg;
+          try {
+            decryptMsg = jsonDecode((await Signer.shared.nip44Decrypt(event['content']))!);
+          } catch (_) {
+            return;
+          }
           final deletedEvent = decryptMsg.where((c) => c[0] == 'e' && c[3] == 'destroyed')
             .map((c) => c[1]).toList();
           newHistories.add({
@@ -333,7 +338,6 @@ class Nip60 {
     }
 
     return (evtIds, rolloverEvent);
-    // await createHistoryEvent(evtIds, rolloverEvent);
   }
 
   Subscription fetchTokenEvent(Function updateProofEvent) {
@@ -369,7 +373,12 @@ class Nip60 {
     }
     for(var id in proofEvents.keys) {
       final event = proofEvents[id];
-      dynamic decryptMsg = jsonDecode((await Signer.shared.nip44Decrypt(event['content']))!);
+      dynamic decryptMsg;
+      try {
+        decryptMsg = jsonDecode((await Signer.shared.nip44Decrypt(event['content']))!);
+      } catch (_) {
+        return;
+      }
       
       if (Cashu.shared.mints.where((mint) => mint.mintURL == decryptMsg['mint']).isEmpty) {
         bool added = await Cashu.shared.addMint(decryptMsg['mint']);

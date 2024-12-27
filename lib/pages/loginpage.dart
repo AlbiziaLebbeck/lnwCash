@@ -22,7 +22,7 @@ class LoginPage extends StatelessWidget {
             children: [
               FadeInDown(
                 child: Container(
-                  height: 280,
+                  height: 250,
                   decoration: const BoxDecoration(
                     image: DecorationImage(
                       image: AssetImage('images/lnwCash.png'),
@@ -41,20 +41,10 @@ class LoginPage extends StatelessWidget {
                   textAlign: TextAlign.center,
                 ),
               ),
-              FadeInLeft(
-                child: Text('Simple, Private, and Secure', 
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.primary, 
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 20),
               FadeInRight(
                 child: Text(
-                  'lnwCash is a Bitcoin wallet powered by ecash, which is backed by Bitcoin Lightning via the Cashu protocol.',
+                  'LnwCash is a custodial wallet that holds your funds with ecash, a bearer token fully backed by Bitcoin through the Lightning Network and the Cashu protocol.',
                   style: TextStyle(
                       color: Theme.of(context).colorScheme.primary, 
                       fontSize: 16,
@@ -62,10 +52,10 @@ class LoginPage extends StatelessWidget {
                     textAlign: TextAlign.center,
                 ),
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 20),
               FadeInRight(
                 child: Text(
-                  'Your ecash will be privately and securely backed up in Nostr relays.',
+                  'This wallet ensures privacy and security in payments while allowing seamless backup of your ecash in Nostr relays.',
                   style: TextStyle(
                       color: Theme.of(context).colorScheme.primary, 
                       fontSize: 16,
@@ -75,7 +65,7 @@ class LoginPage extends StatelessWidget {
               ),
               // const SizedBox(height: 36,),
               // FadeInUp(child: const LoginForm()),
-              const SizedBox(height: 30),
+              const SizedBox(height: 20),
               FadeInUp(
                 child: FilledButton(
                   style: FilledButton.styleFrom(
