@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
+
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:nostr_core_dart/nostr.dart';
 import 'package:lnwcash/pages/signuppage.dart';
 import 'package:lnwcash/pages/walletpage.dart';
-import 'package:lnwcash/utils/nip07.dart';
+import 'package:lnwcash/utils/nip07.dart'
+  if (dart.library.js) 'package:lnwcash/utils/nip07_web.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -283,7 +286,7 @@ class _LoginFormState extends State<LoginForm> {
             child: const Text('Login with nsec (insecure)', style: TextStyle(fontSize: 16)),
           ),
           const SizedBox(height: 10,),
-          FilledButton(
+          kIsWeb ? FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.primaryFixedDim,
               minimumSize: const Size(double.infinity, 55),
@@ -311,7 +314,7 @@ class _LoginFormState extends State<LoginForm> {
               }
             },
             child: const Text('Login with nip-07', style: TextStyle(fontSize: 16)),
-          ),
+          ) : const SizedBox(height: 0,),
         ],
       )
     );

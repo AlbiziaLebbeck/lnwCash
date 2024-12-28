@@ -157,7 +157,7 @@ Drawer getDrawer(BuildContext context, {
         const Divider(),
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 15),
-          child: Text('lnwCash v$version-alpha', style: const TextStyle(fontSize: 14)),
+          child: Text('lnwCash v$version-beta', style: const TextStyle(fontSize: 14)),
         ),
       ],
     ),

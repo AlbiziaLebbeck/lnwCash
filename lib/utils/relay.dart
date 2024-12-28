@@ -1,9 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:js_interop';
 import 'package:nostr_core_dart/nostr.dart' as nostr;
-// ignore: depend_on_referenced_packages
-import 'package:web/web.dart';
+import 'package:web_socket/web_socket.dart';
 import 'package:lnwcash/utils/subscription.dart';
 
 class RelayPool {
@@ -153,21 +151,25 @@ class Relay{
 
     _connecting = Completer();
 
-    webSocket = WebSocket(url);
-    webSocket?.onMessage.listen((event) {
-      if (onMessage != null) {
-        onMessage!(url,event.data.toString());
-      }
-    });
-
-    webSocket?.onOpen.listen((event) {
+    try {
+      webSocket = await WebSocket.connect(Uri.parse(url));
       onConnected();
-    });
-
-    webSocket?.onError.listen((event) {
-      onError(event.toString(), reconnect: true);
+    } catch(errMsg) {
+      onError(errMsg.toString(), reconnect: true);
       _connecting.complete();
-    });
+    }
+
+    webSocket?.events.listen((e) async {
+    switch (e) {
+      case TextDataReceived(text: final text):
+        if (onMessage != null) {
+          print(text);
+          onMessage!(url, text);
+        }
+      case BinaryDataReceived():
+      case CloseReceived():
+    }
+  });
 
     await _connecting.future;
     return webSocket != null ? true : false;
@@ -183,7 +185,8 @@ class Relay{
     if (webSocket != null){
       if (_connecting.isCompleted) {
         try {
-          webSocket?.send(message.toJS);
+          // webSocket?.send(message.toJS);
+          webSocket?.sendText(message);
           return true;
         } catch (e) {
           onError(e.toString(), reconnect: true);

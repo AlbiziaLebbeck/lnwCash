@@ -1,6 +1,6 @@
 import 'dart:convert';
-import 'dart:js_interop';
-import 'package:lnwcash/utils/nip07.dart';
+import 'package:lnwcash/utils/nip07.dart'
+  if (dart.library.js) 'package:lnwcash/utils/nip07_web.dart';
 import 'package:nostr_core_dart/nostr.dart';
 
 class Signer {
@@ -69,7 +69,7 @@ Future<Event?> createEvent ({
   } else {
     if (!nip07Support()) return null;
     
-    JSObject? signEvt = await nip07Sign(
+    final signEvt = await nip07Sign(
       currentUnixTimestampSeconds(), 
       kind, 
       tags, 

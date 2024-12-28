@@ -94,7 +94,7 @@ class _WalletManager extends State<WalletManager>{
           ),
           const SizedBox(height: 25),
           SizedBox(
-            height: MediaQuery.of(context).size.height/2 - 235,
+            height: MediaQuery.of(context).size.height/2 - 250,
             child: ListView(
               scrollDirection: Axis.vertical,
               children: List.generate(Nip60.shared.wallets.length, 
