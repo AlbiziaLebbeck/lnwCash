@@ -89,82 +89,87 @@ class _WalletPage extends State<WalletPage> with CashuListener {
   Widget build(BuildContext context) {
     return Scaffold(
       body: <Widget>[
-        Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              stops: const [.0, 1],
-              colors: [
-                Theme.of(context).colorScheme.surfaceContainerHighest,
-                Theme.of(context).colorScheme.surfaceContainerLowest,
-              ],
+        SafeArea(child:
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                stops: const [.0, 1],
+                colors: [
+                  Theme.of(context).colorScheme.surfaceContainerHighest,
+                  Theme.of(context).colorScheme.surfaceContainerLowest,
+                ],
+              ),
             ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.only(top: 10, bottom: 10),
-            child: Column(
-              children: [
-                const SizedBox(height: 5,),
-                ProfileCard(prefs: widget.prefs,),
-                SizedBox(height: MediaQuery.of(context).size.height/4,),
-                FadeIn(
-                  child: Center(
-                    child: Text('Current Balance', 
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.secondary, 
-                        fontSize: 18
-                      ),
-                    )
-                  ),
-                ),
-                FadeIn(
-                  child: Center(
-                    child: Text('$balance sat', 
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary,
-                        fontSize: 45, 
-                        fontWeight: FontWeight.bold, 
-                        fontFamily: ''
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 25,),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    FadeInLeft(
-                      child:_sendreceive(context, 
-                        title: 'Receive', 
-                        icon: Icon(IconlyLight.arrow_down, size: 30, color: Theme.of(context).colorScheme.secondary,),
-                        onPreesed: _onReceive,
+            child: 
+            Padding(
+              padding: const EdgeInsets.only(top: 10, bottom: 10),
+              child: Column(
+                children: [
+                  const SizedBox(height: 5,),
+                  ProfileCard(prefs: widget.prefs,),
+                  SizedBox(height: MediaQuery.of(context).size.height/4,),
+                  FadeIn(
+                    child: Center(
+                      child: Text('Current Balance', 
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.secondary, 
+                          fontSize: 18
+                        ),
                       )
                     ),
-                    const SizedBox(width:16,),
-                    FadeInRight(
-                      child:_sendreceive(context, 
-                        title: 'Send', 
-                        icon: Icon(IconlyLight.arrow_up, size: 30, color: Theme.of(context).colorScheme.secondary,),
-                        onPreesed: _onSend,
-                      )
+                  ),
+                  FadeIn(
+                    child: Center(
+                      child: Text('$balance sat', 
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontSize: 45, 
+                          fontWeight: FontWeight.bold, 
+                          fontFamily: ''
+                        ),
+                      ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 25,),
-                // getMintCards(context),
-              ],
+                  ),
+                  const SizedBox(height: 25,),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      FadeInLeft(
+                        child:_sendreceive(context, 
+                          title: 'Receive', 
+                          icon: Icon(IconlyLight.arrow_down, size: 30, color: Theme.of(context).colorScheme.secondary,),
+                          onPreesed: _onReceive,
+                        )
+                      ),
+                      const SizedBox(width:16,),
+                      FadeInRight(
+                        child:_sendreceive(context, 
+                          title: 'Send', 
+                          icon: Icon(IconlyLight.arrow_up, size: 30, color: Theme.of(context).colorScheme.secondary,),
+                          onPreesed: _onSend,
+                        )
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 25,),
+                  // getMintCards(context),
+                ],
+              ),
             ),
           ),
         ),
-        Column(
-          children: [
-            const SizedBox(height: 25,),
-            Text("Transaction History", style: TextStyle(fontSize: 18, color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600),),
-            const SizedBox(height: 25,),
-            getTransactionHistory(context),
-          ]
-        )
+        SafeArea(child:
+          Column(
+            children: [
+              const SizedBox(height: 25,),
+              Text("Transaction History", style: TextStyle(fontSize: 18, color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600),),
+              const SizedBox(height: 25,),
+              getTransactionHistory(context),
+            ]
+          )
+        ),
       ][_currentPageIndex],
       drawer: getDrawer(context, 
         prefs:  widget.prefs,
