@@ -6,11 +6,11 @@ import 'package:cashu_dart/utils/network/http_client.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:qrcode_reader_web/qrcode_reader_web.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:iconly/iconly.dart';
 import 'package:loader_overlay/loader_overlay.dart';
+
 // ignore: implementation_imports
 import 'package:bolt11_decoder/src/word_reader.dart';
 
@@ -18,6 +18,8 @@ import 'package:cashu_dart/core/nuts/nut_00.dart';
 import 'package:cashu_dart/model/invoice.dart';
 import 'package:cashu_dart/model/invoice_listener.dart';
 import 'package:cashu_dart/model/mint_model.dart';
+
+import 'package:lnwcash/pages/qrscanpage.dart';
 
 import 'package:lnwcash/utils/relay.dart';
 import 'package:lnwcash/utils/subscription.dart';
@@ -57,8 +59,6 @@ class _WalletPage extends State<WalletPage> with CashuListener {
 
   int _currentPageIndex = 0;
 
-  bool _scanDetected = false;
-
   @override
   void initState() {
     super.initState();
@@ -75,7 +75,10 @@ class _WalletPage extends State<WalletPage> with CashuListener {
         'wss://relay.damus.io',
         'wss://nos.lol'
       ];
+      if (mounted) context.loaderOverlay.show();
       await RelayPool.shared.init(initRelays);
+      if (mounted) context.loaderOverlay.hide();
+
       widget.prefs.setStringList('relays', RelayPool.shared.getRelayURL());
 
       await _fetchWalletEvent();
@@ -212,79 +215,68 @@ class _WalletPage extends State<WalletPage> with CashuListener {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          _scanDetected = false;
-          showDialog(context: context,
-            builder: (context) => QRCodeReaderTransparentWidget(
-              onDetect: (QRCodeCapture capture) async {
-                if (!_scanDetected) {
-                  _scanDetected = true;
-
-                  String captureText = capture.raw;
-
-                  // _ecashController.text = capture.raw;
-                  final token = Nut0.decodedToken(captureText);// TokenHelper.getDecodedToken(value);
-                  if (token != null) {
-                    Navigator.of(context).pop();
-                    Cashu.shared.redeemEcash(token: token);
-                    context.loaderOverlay.show();
-                    return;
-                  }
-
-                  if (captureText.startsWith('lightning:')) {
-                    captureText = capture.raw.substring('lightning:'.length);
-                  }
-
-                  if (Cashu.shared.payingLightningInvoice(capture.raw) == null) {
-                    Navigator.of(context).pop('lightning');
-                    return;
-                  }
-
-                  if (captureText.toLowerCase().startsWith('lnurl')) {
-                    final bech32 = const Bech32Codec().decode(
-                      captureText,
-                      2000,
-                    );
-                    var data = WordReader(bech32.data);
-                    final url = utf8.decode(data.read(data.words.length*5)); 
-                    final response = await HTTPClient.get(
-                      url.substring(0, url.length - 1),
-                      modelBuilder: (json) {
-                        if (json is !Map) return null; 
-                        return json;
-                      },
-                    );
-                    if (response.isSuccess) {
-                      // ignore: use_build_context_synchronously
-                      final lnurl = await showDialog(context: context,
-                        builder: (context) => PayLNAddressDialog(captureText, response.data),
-                      );
-
-                      if (lnurl != null) {
-                        Cashu.shared.payingLightningInvoice(lnurl);
-                        // ignore: use_build_context_synchronously
-                        Navigator.of(context).pop('lightning');
-                        return;
-                      }
-                    }
-                  }
-                  // ignore: use_build_context_synchronously
-                  Navigator.of(context).pop();
-                }
-              },
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => const BarcodeScannerSimple(),
             ),
-          ).then((value) async {
-            if (value == null) return;
+          ).then((captureText) async {
+            if (captureText == null) return;
 
-            final quotes = await Cashu.shared.getLastestQuote();
-            // ignore: use_build_context_synchronously
-            showDialog(context: context,
-              builder: (context) => PayQuoteDialog(quotes),
-            ).then((value) {
-              if (value == "paying") {
+            String lnurl = '';
+            final token = Nut0.decodedToken(captureText);// TokenHelper.getDecodedToken(value);
+            if (token != null) {
+              Cashu.shared.redeemEcash(token: token);
+              // ignore: use_build_context_synchronously
+              context.loaderOverlay.show();
+              return;
+            }
+
+            if (captureText.startsWith('lightning:')) {
+              captureText = captureText.substring('lightning:'.length);
+            }
+
+            if (Cashu.shared.payingLightningInvoice(captureText) == null) {
+              lnurl = captureText;
+            }
+
+            if (captureText.toLowerCase().startsWith('lnurl') && lnurl == '') {
+              final bech32 = const Bech32Codec().decode(
+                captureText,
+                2000,
+              );
+              var data = WordReader(bech32.data);
+              final url = utf8.decode(data.read(data.words.length*5)); 
+              final response = await HTTPClient.get(
+                url.substring(0, url.length - 1),
+                modelBuilder: (json) {
+                  if (json is !Map) return null; 
+                  return json;
+                },
+              );
+              if (response.isSuccess) {
                 // ignore: use_build_context_synchronously
-                context.loaderOverlay.show();
+                lnurl = await showDialog(context: context,
+                  builder: (context) => PayLNAddressDialog(captureText, response.data),
+                );
+
+                if (lnurl != '') {
+                  Cashu.shared.payingLightningInvoice(lnurl);
+                }
               }
-            });
+            }
+
+            if (lnurl != '') { 
+              final quotes = await Cashu.shared.getLastestQuote();
+              // ignore: use_build_context_synchronously
+              showDialog(context: context,
+                builder: (context) => PayQuoteDialog(quotes),
+              ).then((value) {
+                if (value == "paying") {
+                  // ignore: use_build_context_synchronously
+                  context.loaderOverlay.show();
+                }
+              });
+            }
           });
         },
         child: const Icon(Icons.qr_code_scanner, size: 42,),
@@ -352,8 +344,7 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     widget.prefs.setString('history', jsonEncode(Nip60.shared.histories));
 
     await popUp.future;
-    // ignore: use_build_context_synchronously
-    _callTransactionSnackBar(context, "ecash", (balance - oldBalance).toInt());
+    if (mounted) _callTransactionSnackBar(context, "ecash", (balance - oldBalance).toInt());
   }
 
   @override
@@ -374,13 +365,11 @@ class _WalletPage extends State<WalletPage> with CashuListener {
       
       context.loaderOverlay.show();
       await subscription.finish.future;
-      // ignore: use_build_context_synchronously
-      context.loaderOverlay.hide();
+      if (mounted) context.loaderOverlay.hide();
       RelayPool.shared.unsubscribe(subscription.id);
       
       if (Nip60.shared.wallet.isEmpty || !isInit) {
-        // ignore: use_build_context_synchronously
-        await walletManager(context);
+        if (mounted) await walletManager(context);
         widget.prefs.setString('wallet', jsonEncode(Nip60.shared.wallet));
       }
     }
@@ -399,12 +388,10 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     final dynamic mints = jsonDecode(Nip60.shared.wallet['mints']!);
     if (mints.isEmpty) {
       await Cashu.shared.addMint('https://mint.lnw.cash');
-      // await mintManager(context);
     } else {
       context.loaderOverlay.show();
       await Cashu.shared.setupMints(mints);
-      // ignore: use_build_context_synchronously
-      context.loaderOverlay.hide();
+      if (mounted) context.loaderOverlay.hide();
     }
     Nip60.shared.wallet['mints'] =  jsonEncode(Cashu.shared.mints.map((m) => m.mintURL).toList());
     _loadProofs(isInit: isInit);
@@ -510,8 +497,7 @@ class _WalletPage extends State<WalletPage> with CashuListener {
       }
     });
     
-    // ignore: use_build_context_synchronously
-    context.loaderOverlay.hide();
+    if (mounted) context.loaderOverlay.hide();
 
     if (balanceChange) {
       widget.prefs.setString('wallet', jsonEncode(Nip60.shared.wallet));
@@ -524,30 +510,29 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     var action = await receiveButtomSheet(context);
           
     if (action == 'lightning') {
-      // ignore: use_build_context_synchronously
-      context.loaderOverlay.show();
+      if (mounted) context.loaderOverlay.show();
       Receipt receipt = await Cashu.shared.getLastestInvoice();
       // ignore: use_build_context_synchronously
       context.loaderOverlay.hide();            
 
       GlobalKey dialogKey = GlobalKey();
 
-      // ignore: use_build_context_synchronously
-      showDialog(context: context,
-        builder: (context) => ScaffoldMessenger(
-          key: dialogKey,
-          child: _qrDialog('Lightning invoice', 'lightning:${receipt.request}'),
-        ),
-      ).then((value) {popUp.complete();});
+      if (mounted) {
+        showDialog(context: context,
+          builder: (context) => ScaffoldMessenger(
+            key: dialogKey,
+            child: _qrDialog('Lightning invoice', 'lightning:${receipt.request}'),
+          ),
+        ).then((value) {popUp.complete();});
+      }
 
       await Cashu.shared.invoicePaid.future;
       if (dialogKey.currentContext != null) {
         Navigator.of(dialogKey.currentContext!).pop();
         return;
       }
-    } else if (action == 'cashu') { 
-      // ignore: use_build_context_synchronously
-      context.loaderOverlay.show();
+    } else if (action == 'cashu') {
+      if (mounted) context.loaderOverlay.show();
     }  
     if (!popUp.isCompleted) popUp.complete();
   }
@@ -557,8 +542,7 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     var action = await sendButtomSheet(context);
     if (action == 'cashu') {
       String ecash = await Cashu.shared.getLastestEcash();
-      // ignore: use_build_context_synchronously
-      context.loaderOverlay.hide();
+      if (mounted) context.loaderOverlay.hide();
 
       // ignore: use_build_context_synchronously
       showDialog(context: context,
@@ -568,8 +552,7 @@ class _WalletPage extends State<WalletPage> with CashuListener {
       ).then((value) {popUp.complete();});
     } else if (action == 'lightning') {
       final quotes = await Cashu.shared.getLastestQuote();
-      // ignore: use_build_context_synchronously
-      context.loaderOverlay.hide();
+      if (mounted) context.loaderOverlay.hide();
       
       // ignore: use_build_context_synchronously
       showDialog(context: context,

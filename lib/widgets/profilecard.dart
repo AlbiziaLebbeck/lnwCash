@@ -46,10 +46,12 @@ class _ProfileCard extends State<ProfileCard> {
       onEvent: (events) {
         var event = events[events.keys.first];
         dynamic content = jsonDecode(event['content']);
-        setState(() {
-          name = content["display_name"] ?? content["name"];
-          picture = content['picture'] ?? 'images/nopicAvatar.png';
-        });
+        if (mounted) {
+          setState(() {
+            name = content["display_name"] ?? content["name"];
+            picture = content['picture'] ?? 'images/nopicAvatar.png';
+          });
+        }
         widget.prefs.setString('profile', event['content']);
       }
     );

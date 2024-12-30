@@ -55,6 +55,7 @@ dependencies:
   bech32: ^0.2.2
   intl: ^0.20.1
   web_socket: ^0.1.6
+  mobile_scanner: ^6.0.2
 
 dev_dependencies:
   flutter_test:

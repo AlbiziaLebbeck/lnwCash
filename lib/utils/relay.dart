@@ -157,22 +157,23 @@ class Relay{
     } catch(errMsg) {
       onError(errMsg.toString(), reconnect: true);
       _connecting.complete();
+      return false;
     }
 
     webSocket?.events.listen((e) async {
-    switch (e) {
-      case TextDataReceived(text: final text):
-        if (onMessage != null) {
-          print(text);
-          onMessage!(url, text);
-        }
-      case BinaryDataReceived():
-      case CloseReceived():
-    }
-  });
+      switch (e) {
+        case TextDataReceived(text: final text):
+          if (onMessage != null) {
+            onMessage!(url, text);
+          }
+        case BinaryDataReceived():
+        case CloseReceived():
+          print('Connection to server closed');
+      }
+    });
 
     await _connecting.future;
-    return webSocket != null ? true : false;
+    return true;
   }
 
   disconnect() {
@@ -185,7 +186,6 @@ class Relay{
     if (webSocket != null){
       if (_connecting.isCompleted) {
         try {
-          // webSocket?.send(message.toJS);
           webSocket?.sendText(message);
           return true;
         } catch (e) {

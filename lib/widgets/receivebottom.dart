@@ -2,6 +2,7 @@ import 'package:cashu_dart/core/nuts/nut_00.dart';
 import 'package:cashu_dart/model/mint_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lnwcash/pages/qrscanpage.dart';
 import 'package:lnwcash/utils/cashu.dart';
 import 'package:qrcode_reader_web/qrcode_reader_web.dart';
 
@@ -108,17 +109,16 @@ class _ReceiveButtomSheet extends State<ReceiveButtomSheet> {
                         children: [
                           IconButton(
                             onPressed: () async {
-                              showDialog(context: context,
-                                builder: (context) => QRCodeReaderTransparentWidget(
-                                  onDetect: (QRCodeCapture capture) {
-                                    if (!_scanDetected) {
-                                      _scanDetected = true;
-                                      _ecashController.text = capture.raw;
-                                      Navigator.of(context).pop();
-                                    }
-                                  },
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => const BarcodeScannerSimple(),
                                 ),
-                              );
+                              ).then((captureText) async {
+                                if (!_scanDetected) {
+                                  _scanDetected = true;
+                                  _ecashController.text = captureText;
+                                }
+                              });
                             },
                             icon: const Icon(Icons.qr_code),
                           ),

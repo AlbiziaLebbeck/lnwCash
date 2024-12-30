@@ -7,6 +7,7 @@ import 'package:cashu_dart/utils/network/http_client.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lnwcash/pages/qrscanpage.dart';
 import 'package:lnwcash/utils/cashu.dart';
 
 import 'package:loader_overlay/loader_overlay.dart';
@@ -197,17 +198,13 @@ class _SendButtomSheet extends State<SendButtomSheet> {
                           IconButton(
                             onPressed: () async {
                               _scanDetected = false;
-                              showDialog(context: context,
-                                builder: (context) => QRCodeReaderTransparentWidget(
-                                  onDetect: (QRCodeCapture capture) {
-                                    if (!_scanDetected) {
-                                      _scanDetected = true;
-                                      _lightningController.text = capture.raw;
-                                      Navigator.of(context).pop();
-                                    }
-                                  },
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => const BarcodeScannerSimple(),
                                 ),
-                              );
+                              ).then((captureText) {
+                                _lightningController.text = captureText;
+                              });
                             },
                             icon: const Icon(Icons.qr_code),
                           ), 
