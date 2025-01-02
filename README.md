@@ -1,11 +1,11 @@
 # LnwCash  
 
-LnwCash is a simple and fast **Ecash wallet** designed for both Progressive Web App (PWA) and Android platforms. It leverages **Nostr** and **Cashu protocols** to enable simple, private, and secure Bitcoin microtransactions.  
+LnwCash is a simple **Ecash wallet** designed for both Progressive Web App (PWA) and Android platforms. It leverages **Nostr** and **Cashu protocols** to enable private and secure Bitcoin transactions.  
 
 ## Features  
 
 - **Encrypted Wallet Storage**: Secure your wallet with encryption and store it on Nostr relays using NIP-60.  
-- **Cashu Integration**: Send and receive cCash tokens.
+- **Cashu Integration**: Send and receive ecash tokens.
 - **Bitcoin Lightning** Enable fast Bitcoin payments via the Lightning Network.  
 - **Mint Management**: Manage tokens across multiple mints independently.  
 - **Theming Options**: Customize your wallet interface with light and dark modes, and select colors to match your style.  
@@ -68,29 +68,20 @@ flutter build web
 
 **Android APK**
 
-Generate an APK for manual installation or Play Store deployment:
+Generate an APK for manual installation:
 
 ```bash
 flutter build apk --release
 ```
 
-<!-- ---
+## Contributing  
+
+We welcome your feedback and contributions!  
+
+Feel free to report bugs or request features by opening an [issue](https://github.com/AlbiziaLebbeck/lnwCash/issues).  
+
+Stay tuned for updates as we add more detailed guidelines in the future! 
 
 ## License
 
-LnwCash is an open-source project licensed under the MIT License. -->
-
----
-
-## Screenshots
-
-
----
-
-## Acknowledgments  
-
-LnwCash is built using:  
-- [Flutter](https://flutter.dev/)  
-- [Dart](https://dart.dev/)  
-- [Nostr Protocol](https://github.com/nostr-protocol) with **NIP-60** for encrypted wallet storage and secure token transfer.  
-- [Cashu Protocol](https://cashu.dev/)  
+LnwCash is an open-source project licensed under the [MIT License](https://github.com/AlbiziaLebbeck/lnwCash/blob/main/LICENSE).
