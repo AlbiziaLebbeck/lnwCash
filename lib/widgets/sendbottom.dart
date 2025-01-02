@@ -11,7 +11,6 @@ import 'package:lnwcash/pages/qrscanpage.dart';
 import 'package:lnwcash/utils/cashu.dart';
 
 import 'package:loader_overlay/loader_overlay.dart';
-import 'package:qrcode_reader_web/qrcode_reader_web.dart';
 import 'package:bech32/bech32.dart';
 // ignore: implementation_imports
 import 'package:bolt11_decoder/src/word_reader.dart';
@@ -36,8 +35,6 @@ class _SendButtomSheet extends State<SendButtomSheet> {
 
   final _ecashFormKey = GlobalKey<FormState>();
   final _lightningFormKey = GlobalKey<FormState>();
-
-  bool _scanDetected = false;
 
   final TextEditingController _lightningController = TextEditingController();
 
@@ -197,7 +194,6 @@ class _SendButtomSheet extends State<SendButtomSheet> {
                         children: [
                           IconButton(
                             onPressed: () async {
-                              _scanDetected = false;
                               Navigator.of(context).push(
                                 MaterialPageRoute(
                                   builder: (context) => const BarcodeScannerSimple(),

@@ -49,13 +49,12 @@ dependencies:
   bolt11_decoder: ^1.0.2
   decimal: ^2.3.3
   
-  qrcode_reader_web: ^1.1.1
   flutter_settings_screens: ^0.3.4
   provider: ^6.1.2
   bech32: ^0.2.2
   intl: ^0.20.1
-  web_socket: ^0.1.6
   mobile_scanner: ^6.0.2
+  web_socket_client: ^0.1.5
 
 dev_dependencies:
   flutter_test:

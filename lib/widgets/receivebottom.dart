@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lnwcash/pages/qrscanpage.dart';
 import 'package:lnwcash/utils/cashu.dart';
-import 'package:qrcode_reader_web/qrcode_reader_web.dart';
 
 Future<dynamic> receiveButtomSheet(context) async{
   return showModalBottomSheet(context: context,

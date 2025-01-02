@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:nostr_core_dart/nostr.dart' as nostr;
-import 'package:web_socket/web_socket.dart';
+import 'package:web_socket_client/web_socket_client.dart';
 import 'package:lnwcash/utils/subscription.dart';
 
 class RelayPool {
@@ -15,11 +15,10 @@ class RelayPool {
   Completer _initialized = Completer();
   int _numConnectedRelay = 0;
 
-  Future<void> init(List<String> initRelays) async {
+  init(List<String> initRelays) async {
     for(var relayURL in initRelays) {
-      await RelayPool.shared.add(relayURL);
+      add(relayURL);
     }
-    _initialized.complete();
   }
 
   List<String> getRelayURL() {
@@ -27,26 +26,24 @@ class RelayPool {
   }
 
   bool getRelayConnection(String relayURL) {
-    return _relays[relayURL]!.isConnected;
+    return _relays[relayURL]!.webSocket!.connection.state is Connected || _relays[relayURL]!.webSocket!.connection.state is Reconnected;
   }
 
-  Future<bool> add(String url) async {
+  add(String url) async {
     if (_relays.containsKey(url)) {
-      return true;
+      return;
     }
 
     Relay relay = Relay(url);
-    relay.onMessage = _onEvent;
     _relays[relay.url] = relay;
 
-    if (await relay.connect()) {
+    relay.connect(onMessage: _onEvent, onConnect: () {
+      if (!_initialized.isCompleted) _initialized.complete();
       _numConnectedRelay += 1;
       for (Subscription subscription in _subscriptions.values) {
         relay.send(subscription.request());
       }
-      return true;
-    }
-    return false;
+    });
   }
 
   void remove(String url) {
@@ -90,7 +87,6 @@ class RelayPool {
     int relayCheck = 0;
     
     for (Relay relay in _relays.values) {
-      if (!relay.isConnected) continue;
       bool result = relay.send(message);
       if (result) {
         hadSubmitSend = true;
@@ -137,89 +133,56 @@ class Relay{
   
   final String url;
 
+  static var backoff = BinaryExponentialBackoff(
+    initial: const Duration(seconds: 1),
+    maximumStep: 5
+  );
   WebSocket? webSocket;
-  bool isConnected = false;
+  bool hasConnected = false;
 
-  List<dynamic> pendingMessages = [];
-
-  Completer _connecting = Completer();
-
-  Future<bool> connect() async {
+  void connect({Function? onConnect, Function(String,String)? onMessage}) {
     if (webSocket != null ) {
-      return true;
+      return;
     }
 
-    _connecting = Completer();
+    _onConnect = onConnect;
+    webSocket = WebSocket(Uri.parse(url), backoff: backoff);
 
-    try {
-      webSocket = await WebSocket.connect(Uri.parse(url));
-      onConnected();
-    } catch(errMsg) {
-      onError(errMsg.toString(), reconnect: true);
-      _connecting.complete();
-      return false;
-    }
-
-    webSocket?.events.listen((e) async {
-      switch (e) {
-        case TextDataReceived(text: final text):
-          if (onMessage != null) {
-            onMessage!(url, text);
-          }
-        case BinaryDataReceived():
-        case CloseReceived():
-          print('Connection to server closed');
+    webSocket?.connection.listen((state) {
+      // print('$url is $state');
+      if (state is Connected) {
+        hasConnected = true;
+        // print('Connected from relay: ${url}');
+        if (_onConnect != null) _onConnect!();
       }
     });
 
-    await _connecting.future;
-    return true;
+    _onMessage = onMessage;
+    webSocket?.messages.listen((message) async {
+      if (_onMessage != null) {
+        // print(message);
+        _onMessage!(url, message);
+      }
+    });
+    return;
   }
 
   disconnect() {
     webSocket?.close();
     webSocket = null;
-    isConnected = false;
+    hasConnected = false;
   }
 
   bool send(String message){
-    if (webSocket != null){
-      if (_connecting.isCompleted) {
-        try {
-          webSocket?.sendText(message);
-          return true;
-        } catch (e) {
-          onError(e.toString(), reconnect: true);
-          pendingMessages.add(message); 
-        }
-      }
-    }
-    return false;
-  }
-  
-  Future onConnected() async {
-    _connecting.complete();
-    isConnected = true;
-    print('Connected from relay: ${url}');
-    for (var message in pendingMessages){
-      send(message);
-    }
-
-    pendingMessages.clear();
-  }
-
-  Function(String,String)? onMessage;
-
-  bool _waitingReconnect = false;
-
-  void onError(String errMsg, {bool reconnect = false}) {
-    disconnect();
-    if (reconnect && !_waitingReconnect) {
-      _waitingReconnect = true;
-      Future.delayed(const Duration(seconds: 30), () {
-        _waitingReconnect = false;
-        connect();
-      });
+    if (webSocket?.connection.state is Connected || webSocket?.connection.state is Reconnected) {
+      webSocket?.send(message);
+      // print('$url send $message');
+      return true;
+    } else {
+      return false;
     }
   }
+
+  Function? _onConnect;
+  Function(String,String)? _onMessage;
 }
