@@ -1,11 +1,11 @@
 {
-    "name": "lnwCash",
-    "short_name": "lnwCash",
+    "name": "LnwCash",
+    "short_name": "LnwCash",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#faebe0",
     "theme_color": "#faebe0",
-    "description": "Empower Your Satoshi with Ecash — Simple, Private, and Secure",
+    "description": "Take Control of Your Satoshi with Ecash",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
