@@ -3,8 +3,8 @@
     "short_name": "LnwCash",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#faebe0",
-    "theme_color": "#faebe0",
+    "background_color": "#f2f1ec",
+    "theme_color": "##f2f1ec",
     "description": "Take Control of Your Satoshi with Ecash",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
@@ -12,12 +12,14 @@
         {
             "src": "icons/Icon-192.png",
             "sizes": "192x192",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "maskable any"
         },
         {
             "src": "icons/Icon-512.png",
             "sizes": "512x512",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "maskable any"
         },
         {
             "src": "icons/Icon-maskable-192.png",
