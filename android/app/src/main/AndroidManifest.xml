@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="Lnwcash"
+        android:label="LnwCash"
         android:name="${applicationName}"
         android:icon="@drawable/ic_launcher">
         <activity

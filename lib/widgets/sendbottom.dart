@@ -199,6 +199,8 @@ class _SendButtomSheet extends State<SendButtomSheet> {
                                   builder: (context) => const BarcodeScannerSimple(),
                                 ),
                               ).then((captureText) {
+                                if (captureText == null) return;
+                                
                                 _lightningController.text = captureText;
                               });
                             },

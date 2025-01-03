@@ -113,6 +113,8 @@ class _ReceiveButtomSheet extends State<ReceiveButtomSheet> {
                                   builder: (context) => const BarcodeScannerSimple(),
                                 ),
                               ).then((captureText) async {
+                                if (captureText == null) return;
+                                
                                 if (!_scanDetected) {
                                   _scanDetected = true;
                                   _ecashController.text = captureText;

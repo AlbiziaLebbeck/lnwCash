@@ -31,6 +31,10 @@ class _BarcodeScannerSimpleState extends State<BarcodeScannerSimple> {
       body: Stack(
         children: [
           MobileScanner(
+            controller: MobileScannerController(
+              detectionSpeed: DetectionSpeed.normal,
+              facing: CameraFacing.back,
+            ),
             onDetect: _handleBarcode,
           ),
           Align(
