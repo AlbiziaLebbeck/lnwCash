@@ -214,7 +214,7 @@ class _MintPage extends State<MintPage> {
                         onPressed: () {
                           if (Cashu.shared.mints.where((mint) => mint.mintURL == mintURL).isNotEmpty) return;
                           Cashu.shared.addMint(mintURL).then((_) {
-                                setState(() {});
+                            setState(() {});
                           });
                         }, 
                         icon: Icon(Icons.add_circle, size: 24, color: Theme.of(context).colorScheme.primary),
