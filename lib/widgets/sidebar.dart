@@ -72,11 +72,11 @@ Drawer getDrawer(BuildContext context, {
             Navigator.of(context).pop();
             Navigator.push(context,
               MaterialPageRoute(builder: (context) => const MintPage()),
-            );
-            // mintManager(context).then((_) {
-            //   Nip60.shared.wallet['mints'] =  jsonEncode(Cashu.shared.mints.map((m) => m.mintURL).toList());
-            //   loadProofs(isInit: false);
-            // });
+            ).then((_) {
+              Nip60.shared.wallet['mints'] =  jsonEncode(Cashu.shared.mints.map((m) => m.mintURL).toList());
+              Nip60.shared.updateWallet();
+              prefs.setString('wallet', jsonEncode(Nip60.shared.wallet));
+            });
           },
         ),
         const Divider(),
@@ -91,7 +91,9 @@ Drawer getDrawer(BuildContext context, {
             Navigator.of(context).pop();
             Navigator.push(context,
               MaterialPageRoute(builder: (context) => RelayPage(prefs: prefs)),
-            );
+            ).then((_) {
+              Nip60.shared.updateWallet();
+            });
           },
         ),
         nsec != 'nsec1jlrw3c' ? ListTile(

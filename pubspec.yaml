@@ -55,6 +55,7 @@ dependencies:
   intl: ^0.20.1
   mobile_scanner: ^6.0.2
   web_socket_client: ^0.1.5
+  pwa_install: ^0.0.5
 
 dev_dependencies:
   flutter_test:
