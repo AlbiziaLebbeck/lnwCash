@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
+import 'package:pwa_install/pwa_install.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:animate_do/animate_do.dart';
@@ -15,11 +16,14 @@ class LoginPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    double height = MediaQuery.sizeOf(context).height;
+    
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
       body: Center(
         child: Container(
-          padding: EdgeInsets.only(left: 48, right: 48, top: MediaQuery.sizeOf(context).height / 2 - 330),
+          // padding: EdgeInsets.only(left: 48, right: 48, top: MediaQuery.sizeOf(context).height / 2 - 330),
+          padding: EdgeInsets.only(left: 48, right: 48, top: height > 700 ? (height - 700)/2 : 0),
           width: 500,
           child: Column(
             children: [
@@ -55,7 +59,7 @@ class LoginPage extends StatelessWidget {
                     textAlign: TextAlign.center,
                 ),
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 20),
               FadeInRight(
                 child: Text(
                   'This wallet ensures privacy and security in payments while allowing seamless backup of your ecash in Nostr relays.',
@@ -66,13 +70,27 @@ class LoginPage extends StatelessWidget {
                     textAlign: TextAlign.center,
                 ),
               ),
-              // const SizedBox(height: 36,),
-              // FadeInUp(child: const LoginForm()),
               const SizedBox(height: 30),
+              if (kIsWeb && PWAInstall().installPromptEnabled) FadeInUp(
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                    minimumSize: const Size(double.infinity, 55),
+                  ),
+                  onPressed: () {
+                    try {
+                      PWAInstall().promptInstall_();
+                    } catch (e) {
+                      debugPrint(e.toString());
+                    }
+                  }, 
+                  child: const Text('Install PWA', style: TextStyle(fontSize: 18,)),
+                ),
+              ),
+              if (kIsWeb && PWAInstall().installPromptEnabled) const SizedBox(height: 10),
               FadeInUp(
                 child: FilledButton(
                   style: FilledButton.styleFrom(
-                    // backgroundColor: Theme.of(context).colorScheme.primaryFixedDim,
                     minimumSize: const Size(double.infinity, 55),
                   ),
                   onPressed: () {

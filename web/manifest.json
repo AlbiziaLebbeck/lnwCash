@@ -1,10 +1,10 @@
 {
     "name": "LnwCash",
     "short_name": "LnwCash",
-    "start_url": ".",
+    "start_url": "https://lnw.cash",
     "display": "standalone",
     "background_color": "#f2f1ec",
-    "theme_color": "##f2f1ec",
+    "theme_color": "#f2f1ec",
     "description": "Take Control of Your Satoshi with Ecash",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,

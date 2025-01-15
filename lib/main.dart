@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_settings_screens/flutter_settings_screens.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:loader_overlay/loader_overlay.dart';
@@ -8,9 +9,11 @@ import 'package:lnwcash/pages/walletpage.dart';
 import 'package:pwa_install/pwa_install.dart';
 
 void main() {
-  PWAInstall().setup(installCallback: () {
-    debugPrint('APP INSTALLED!');
-  });
+  if (kIsWeb) {
+    PWAInstall().setup(installCallback: () {
+      debugPrint('APP INSTALLED!');
+    });
+  }
 
   runApp(const MyApp());
 }
@@ -21,15 +24,6 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    print(PWAInstall().installPromptEnabled);
-    if (PWAInstall().installPromptEnabled) {
-      try {
-        PWAInstall().promptInstall_();
-      } catch (e) {
-        print(e.toString());
-      }
-    }
-
     return ChangeNotifierProvider(
       create: (_) => ThemeNotifier(),
       child: Consumer<ThemeNotifier>(
@@ -37,7 +31,7 @@ class MyApp extends StatelessWidget {
           return GlobalLoaderOverlay(
             child: MaterialApp(
               debugShowCheckedModeBanner: false,
-              title: 'lnwCash',
+              title: 'LnwCash',
               theme: ThemeData(
                 colorSchemeSeed: themeNotifier.colorScheme,
                 useMaterial3: true,
