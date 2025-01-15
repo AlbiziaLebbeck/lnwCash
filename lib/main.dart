@@ -5,8 +5,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:loader_overlay/loader_overlay.dart';
 import 'package:lnwcash/pages/loginpage.dart';
 import 'package:lnwcash/pages/walletpage.dart';
+import 'package:pwa_install/pwa_install.dart';
 
 void main() {
+  PWAInstall().setup(installCallback: () {
+    debugPrint('APP INSTALLED!');
+  });
+
   runApp(const MyApp());
 }
 
@@ -16,6 +21,15 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
+    print(PWAInstall().installPromptEnabled);
+    if (PWAInstall().installPromptEnabled) {
+      try {
+        PWAInstall().promptInstall_();
+      } catch (e) {
+        print(e.toString());
+      }
+    }
+
     return ChangeNotifierProvider(
       create: (_) => ThemeNotifier(),
       child: Consumer<ThemeNotifier>(
