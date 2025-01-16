@@ -84,15 +84,7 @@ class TransactionView extends StatelessWidget {
                         QrImageView(
                           data: transactionData['detail']!,
                           version: QrVersions.auto,
-                          size: 300.0,
-                          eyeStyle: QrEyeStyle(
-                            eyeShape: QrEyeShape.square,
-                            color: Theme.of(context).colorScheme.onSurface
-                          ),
-                          dataModuleStyle: QrDataModuleStyle(
-                            dataModuleShape: QrDataModuleShape.square,
-                            color: Theme.of(context).colorScheme.onSurface
-                          ),
+                          backgroundColor: Colors.white,
                         ),
                       const SizedBox(height: 15,),
                       transactionData['detail'] == '' ? 

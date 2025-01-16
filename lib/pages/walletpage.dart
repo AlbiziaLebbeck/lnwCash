@@ -643,15 +643,7 @@ class _WalletPage extends State<WalletPage> with CashuListener {
               QrImageView(
                 data: data,
                 version: QrVersions.auto,
-                size: 300.0,
-                eyeStyle: QrEyeStyle(
-                  eyeShape: QrEyeShape.square,
-                  color: Theme.of(context).colorScheme.onSurface
-                ),
-                dataModuleStyle: QrDataModuleStyle(
-                  dataModuleShape: QrDataModuleShape.square,
-                  color: Theme.of(context).colorScheme.onSurface
-                ),
+                backgroundColor: Colors.white,
               ),
               const SizedBox(height: 15,),
               Text('${data.substring(0,21)}...',
