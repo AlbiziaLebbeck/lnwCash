@@ -5,7 +5,7 @@
     "display": "standalone",
     "background_color": "#f2f1ec",
     "theme_color": "#f2f1ec",
-    "description": "Take Control of Your Satoshi with Ecash",
+    "description": "LnwCash is a custodial wallet that holds your funds with ecash, a bearer token fully backed by Bitcoin through the Lightning Network and the Cashu protocol.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
@@ -32,6 +32,28 @@
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "maskable"
+        }
+    ],
+    "screenshots" : [
+        {
+            "src": "screenshots/screenshot1.png",
+            "sizes": "638x1280",
+            "type": "image/png"
+        },
+        {
+            "src": "screenshots/screenshot2.png",
+            "sizes": "636x1280",
+            "type": "image/png"
+        },
+        {
+            "src": "screenshots/screenshot3.png",
+            "sizes": "641x1280",
+            "type": "image/png"
+        },
+        {
+            "src": "screenshots/screenshot4.png",
+            "sizes": "637x1280",
+            "type": "image/png"
         }
     ]
 }
