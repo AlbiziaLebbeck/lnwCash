@@ -1,8 +1,9 @@
+import 'package:encrypt_shared_preferences/provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:lnwcash/utils/nip01.dart';
 import 'package:lnwcash/utils/relay.dart';
 import 'package:loader_overlay/loader_overlay.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:lnwcash/pages/walletpage.dart';
 import 'package:nostr_core_dart/nostr.dart';
@@ -68,7 +69,7 @@ class SignupForm extends StatefulWidget {
 class _SignupFormState extends State<SignupForm> {
   final _formKey = GlobalKey<FormState>();
 
-  late final SharedPreferences prefs;
+  late final EncryptedSharedPreferences prefs;
   late Keychain keychain;
 
   @override
@@ -78,7 +79,10 @@ class _SignupFormState extends State<SignupForm> {
   }
 
   void _loadPreference() async {
-    prefs = await SharedPreferences.getInstance();
+    await dotenv.load(fileName: '.env');
+    final secret = dotenv.env['SECRET']!;
+    await EncryptedSharedPreferences.initialize(secret);
+    prefs = EncryptedSharedPreferences.getInstance();
   }
 
   @override

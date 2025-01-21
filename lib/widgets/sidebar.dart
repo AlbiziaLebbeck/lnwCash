@@ -1,10 +1,10 @@
 import 'dart:convert';
 
+import 'package:encrypt_shared_preferences/provider.dart';
 import 'package:flutter/material.dart';
 import 'package:lnwcash/pages/mintpage.dart';
 import 'package:lnwcash/utils/relay.dart';
 import 'package:nostr_core_dart/nostr.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:lnwcash/pages/loginpage.dart';
 import 'package:lnwcash/pages/nostrkeyspage.dart';
@@ -17,7 +17,7 @@ import 'package:lnwcash/utils/cashu.dart';
 import 'package:lnwcash/utils/nip60.dart';
 
 Drawer getDrawer(BuildContext context, {
-  required SharedPreferences prefs,
+  required EncryptedSharedPreferences prefs,
   required Future<void> Function({bool isInit}) fetchWallet,
   required Future<void> Function({bool isInit}) loadProofs,
   required String version,

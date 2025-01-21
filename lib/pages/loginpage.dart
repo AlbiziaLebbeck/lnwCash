@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:pwa_install/pwa_install.dart';
 
-import 'package:shared_preferences/shared_preferences.dart';
+// import 'package:shared_preferences/shared_preferences.dart';
+import 'package:encrypt_shared_preferences/provider.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:nostr_core_dart/nostr.dart';
 import 'package:lnwcash/pages/signuppage.dart';
@@ -212,7 +214,7 @@ class LoginForm extends StatefulWidget {
 
 class _LoginFormState extends State<LoginForm> {
   final _formKey = GlobalKey<FormState>();
-  late final SharedPreferences prefs;
+  late final EncryptedSharedPreferences prefs;
 
   bool passwordVisible=false; 
 
@@ -227,7 +229,10 @@ class _LoginFormState extends State<LoginForm> {
   }
 
   void _loadPreference() async {
-    prefs = await SharedPreferences.getInstance();
+    await dotenv.load(fileName: '.env');
+    final secret = dotenv.env['SECRET']!;
+    await EncryptedSharedPreferences.initialize(secret);
+    prefs = EncryptedSharedPreferences.getInstance();
   }
 
   @override
@@ -301,7 +306,7 @@ class _LoginFormState extends State<LoginForm> {
                 );
               }
             },
-            child: const Text('Login with nsec (insecure)', style: TextStyle(fontSize: 16)),
+            child: const Text('Login with nsec', style: TextStyle(fontSize: 16)),
           ),
           const SizedBox(height: 10,),
           kIsWeb ? FilledButton(

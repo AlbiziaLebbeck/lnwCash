@@ -1,16 +1,16 @@
 import 'dart:convert';
+import 'package:encrypt_shared_preferences/provider.dart';
 import 'package:flutter/material.dart';
 import 'package:lnwcash/utils/subscription.dart';
 import 'package:nostr_core_dart/nostr.dart';
 
 import 'package:lnwcash/widgets/avatar_image.dart';
 import 'package:lnwcash/utils/relay.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileCard extends StatefulWidget {
   const ProfileCard({super.key, required this.prefs});
 
-  final SharedPreferences prefs;
+  final EncryptedSharedPreferences prefs;
 
   @override
   State<StatefulWidget> createState() => _ProfileCard();

@@ -21,13 +21,13 @@ import 'package:cashu_dart/utils/task_scheduler.dart';
 import 'package:cashu_dart/utils/tools.dart';
 
 import 'package:decimal/decimal.dart';
+import 'package:encrypt_shared_preferences/provider.dart';
 import 'package:flutter/material.dart';
 
 import 'package:lnwcash/utils/nip60.dart';
 
 // ignore: depend_on_referenced_packages
 import 'package:pointycastle/export.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class Cashu {
   static final Cashu shared = Cashu._internal();
@@ -52,11 +52,11 @@ class Cashu {
   final List<String> _ecashToken = [];
   Completer _ecashCreated = Completer();
 
-  late SharedPreferences prefs;
+  late EncryptedSharedPreferences prefs;
 
   String _errorMsg = 'Mint is disconnected';
 
-  Future<void> initialize(SharedPreferences prefs) async {
+  Future<void> initialize(EncryptedSharedPreferences prefs) async {
     this.prefs = prefs;
     final preInvoices = prefs.getStringList('invoice');
     if (preInvoices != null) {

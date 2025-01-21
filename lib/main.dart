@@ -1,12 +1,14 @@
+import 'package:encrypt_shared_preferences/provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_settings_screens/flutter_settings_screens.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:loader_overlay/loader_overlay.dart';
 import 'package:lnwcash/pages/loginpage.dart';
 import 'package:lnwcash/pages/walletpage.dart';
 import 'package:pwa_install/pwa_install.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   if (kIsWeb) {
@@ -58,7 +60,7 @@ class UserAuthenication extends StatefulWidget {
 class _UserAuthenication extends State<UserAuthenication> {
 
   String loginType = '';
-  late final SharedPreferences prefs;
+  late final EncryptedSharedPreferences prefs;
 
   @override
   void initState() {
@@ -69,7 +71,23 @@ class _UserAuthenication extends State<UserAuthenication> {
   }
 
   void _loadPreference() async {
-    prefs = await SharedPreferences.getInstance();
+    await dotenv.load(fileName: '.env');
+    final secret = dotenv.env['SECRET']!;
+    await EncryptedSharedPreferences.initialize(secret);
+    prefs = EncryptedSharedPreferences.getInstance();
+
+    final oldPrefs = await SharedPreferences.getInstance();
+    if (oldPrefs.containsKey('loginType')) {
+      final oldKeys = oldPrefs.getKeys();
+      for (var key in oldKeys) {
+        try {
+          prefs.setString(key, oldPrefs.getString(key) ?? '');
+        } catch(_) {
+          
+        }
+        oldPrefs.remove(key);
+      }
+    }
 
     setState(() {
       loginType = prefs.getString("loginType") ?? '';

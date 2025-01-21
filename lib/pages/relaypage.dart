@@ -1,16 +1,16 @@
 import 'package:animate_do/animate_do.dart';
+import 'package:encrypt_shared_preferences/provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_settings_screens/flutter_settings_screens.dart';
 import 'package:lnwcash/utils/relay.dart';
 import 'package:lnwcash/utils/subscription.dart';
 import 'package:nostr_core_dart/nostr.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 
 class RelayPage extends StatefulWidget {
   const RelayPage({super.key, required this.prefs});
 
-  final SharedPreferences prefs;
+  final EncryptedSharedPreferences prefs;
 
   @override
   State<RelayPage> createState() => _RelatPage();

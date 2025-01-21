@@ -3,10 +3,10 @@ import 'dart:convert';
 
 import 'package:bech32/bech32.dart';
 import 'package:cashu_dart/utils/network/http_client.dart';
+import 'package:encrypt_shared_preferences/provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:iconly/iconly.dart';
 import 'package:loader_overlay/loader_overlay.dart';
@@ -39,7 +39,7 @@ import 'package:lnwcash/widgets/walletmanager.dart';
 class WalletPage extends StatefulWidget {
   const WalletPage({super.key, required this.prefs});
 
-  final SharedPreferences prefs;
+  final EncryptedSharedPreferences prefs;
 
   @override
   State<StatefulWidget> createState() => _WalletPage();
