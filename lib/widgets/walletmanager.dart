@@ -4,6 +4,7 @@ import 'package:lnwcash/utils/nip60.dart';
 Future<void> walletManager(context) {
   return showModalBottomSheet(context: context,
     isDismissible: false,
+    enableDrag: false,
     builder: (context) => const WalletManager(),
   );
 }

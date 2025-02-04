@@ -368,9 +368,10 @@ class _WalletPage extends State<WalletPage> with CashuListener {
       if (mounted) context.loaderOverlay.hide();
       RelayPool.shared.unsubscribe(subscription.id);
       
-      if (Nip60.shared.wallet.isEmpty || !isInit) {
+      while (Nip60.shared.wallet.isEmpty || !isInit) {
         if (mounted) await walletManager(context);
         widget.prefs.setString('wallet', jsonEncode(Nip60.shared.wallet));
+        isInit = true;
       }
     }
 
