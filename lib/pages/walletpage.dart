@@ -47,7 +47,7 @@ class WalletPage extends StatefulWidget {
 
 class _WalletPage extends State<WalletPage> with CashuListener {
 
-  String version = '0.1.2';
+  String version = '0.1.3';
 
   late final String pub;
   late final String priv;
@@ -386,7 +386,7 @@ class _WalletPage extends State<WalletPage> with CashuListener {
     Cashu.shared.mints.clear();
     Cashu.shared.proofs.clear();
     Cashu.shared.keysets.clear();
-    final dynamic mints = jsonDecode(Nip60.shared.wallet['mints']!);
+    final dynamic mints = Nip60.shared.wallet.isEmpty ? [] : jsonDecode(Nip60.shared.wallet['mints']!);
     if (mints.isEmpty) {
       await Cashu.shared.addMint('https://mint.lnw.cash');
     } else {
