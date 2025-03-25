@@ -185,7 +185,7 @@ class GetStartedPage extends StatelessWidget {
               FadeInUp(
                 child: FilledButton(
                   style: FilledButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.secondary,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
                     minimumSize: const Size(double.infinity, 55),
                   ),
                   onPressed: () => {
@@ -194,7 +194,7 @@ class GetStartedPage extends StatelessWidget {
                       MaterialPageRoute(builder: (context) => const SignupPage()),
                     )
                   }, 
-                  child: const Text("Generate new Nostr account", style: TextStyle(fontSize: 16))
+                  child: Text("Generate new Nostr for wallet", style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.onPrimary))
                 ),
               ),
             ],
@@ -336,7 +336,7 @@ class _LoginFormState extends State<LoginForm> {
                 );
               }
             },
-            child: const Text('Login with nip-07', style: TextStyle(fontSize: 16)),
+            child: Text('Login with nip-07', style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.onPrimaryFixed)),
           ) : const SizedBox(height: 0,),
         ],
       )
